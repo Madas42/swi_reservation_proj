@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cinema Screening Reservation</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 2rem; }
+        h1 { margin-bottom: 1rem; }
+        .calendar { margin-bottom: 1.5rem; }
+        .screening { padding: 0.6rem; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 0.6rem; }
+    </style>
+</head>
+<body>
+<h1>Select a Screening</h1>
+
+<div class="calendar">
+    <label for="date">Choose date:</label>
+    <input type="date" id="date" name="date" th:value="${selectedDate}">
+</div>
+
+<div>
+    <h2>Available screenings</h2>
+    <div th:each="screening : ${screenings}" class="screening">
+        <strong th:text="${screening.filmTitle}">Film title</strong>
+        -
+        <span th:text="${#temporals.format(screening.startTime, 'yyyy-MM-dd HH:mm')}">time</span>
+    </div>
+</div>
+
+</body>
+</html>
