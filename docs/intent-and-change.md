@@ -1,16 +1,23 @@
 # Project Frame
 
 ## Reservation domain
-Co konkrétně rezervujeme?
+Rezeravce lístků s místem v kině.
 
 ## Purpose
-2–3 věty: komu systém slouží a proč.
+- slouží pro rezervaci a nákup lítků klienty kina
+- šetří čas klientů i zaměstnanců
+- možnost slev, benefitů v kině
 
 ## Users / Stakeholders
-1–3 role.
+- zákaznící / klienti
+- pokladní
+- admin
 
 ## Core concepts
-Reservation, Resource, User + případně 0–3 další pojmy.
+- Reservation
+- Cinema screening
+- User
+- Screening room
 
 ## Core operations
 - Create reservation
@@ -19,22 +26,37 @@ Reservation, Resource, User + případně 0–3 další pojmy.
 - Check availability
 
 ## Persistent state
-Co ukládáme o Reservation a Resource.
+### Reservation 
+- name
+- id_screeningu
+- seat_numbers
+
+### Resource - Cinema_screenig
+- id_film
+- time
+- id_room
 
 ## State-changing operation
-Např. DRAFT → CONFIRMED.
+- výběr sedadel (state_of_seat)
+- validace dostupnosti (seat_occupation)
+- zarezervování místa (CONFIRMED)
 
 ## Common business rule
 Confirmed reservations for the same resource must not overlap.
 
 ## Domain-specific business rule
-Jedno vlastní pravidlo.
+Refund 30 mins before screening.
 
 ## External / system boundary
-Jedna dependency. Defaultně Notification Service.
+Notification Service.
 
 ## Assumption
-Jedna věc, kterou nyní považujete za pravdivou, ale není jistota.
+Zákaznící budou platit online.
 
 ## Unknown
-Jedna důležitá věc, kterou nyní nevíte.
+Rozhodnutí o přednosti rezervace ve stejný čas.
+
+## Selected future pressure
+Category: Q
+Concrete pressure: Více zákazníků v jeden čas.
+Why it is relevant to our reservation system: Reliable reservation system.
