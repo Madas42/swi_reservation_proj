@@ -1,2 +1,17 @@
 /Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/CinemaReservationApplication.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/CinemaRoom.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/CinemaRoomRepository.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/Customer.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/CustomerRepository.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/Film.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/FilmRepository.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/Reservation.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/ReservationRepository.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/ReservationStatus.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/ReservedSeat.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/ReservedSeatRepository.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/Screening.java
 /Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/ScreeningController.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/ScreeningRepository.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/Seat.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/SeatRepository.java

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose seats | Lumiere Cinema</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<header class="site-header">
+    <nav class="nav">
+        <a class="brand" href="/">
+            <span class="brand-mark">L</span>
+            <span class="brand-name">Lumiere Cinema</span>
+        </a>
+        <span class="nav-note">Secure booking</span>
+    </nav>
+</header>
+
+<main class="page">
+    <a class="back" href="/"><span aria-hidden="true">←</span> All screenings</a>
+    <div class="booking-layout">
+        <section class="booking-card">
+            <div class="screening-info">
+                <div class="eyebrow">Select your seats</div>
+                <h1 th:text="${screening.film.title}">Film title</h1>
+                <p th:text="${#temporals.format(screening.startTime, 'EEE, MMM d · HH:mm')}">Screening time</p>
+                <p th:text="${screening.room.name}">Main Hall</p>
+            </div>
+
+            <div class="seat-controls">
+                <label for="seat-count">How many seats?</label>
+                <input id="seat-count" type="number" min="1" th:max="${maxSeats}" value="1">
+                <span class="hint"><strong id="selected-count">0</strong> selected</span>
+            </div>
+
+            <div th:if="${reservationError}" class="reservation-message error" th:text="${reservationError}"></div>
+            <div th:if="${reservationSuccess}" class="reservation-message success" th:text="${reservationSuccess}"></div>
+
+            <form id="reservation-form" th:action="@{/screenings/{id}/reservations(id=${screening.id})}" method="post">
+                <div class="customer-fields">
+                    <label>
+                        Name
+                        <input type="text" name="customerName" required placeholder="Your name">
+                    </label>
+                    <label>
+                        Email
+                        <input type="email" name="customerEmail" required placeholder="you@example.com">
+                    </label>
+                </div>
+                <div id="selected-seat-inputs"></div>
+                <button class="reserve-button" type="submit" disabled>Reserve selected seats</button>
+            </form>
+
+            <div class="screen-label">Screen</div>
+            <div class="screen"></div>
+            <div class="seat-grid" id="seat-grid">
+                <button th:each="seat : ${seats}" class="seat"
+                        th:classappend="${seat.reserved} ? ' reserved' : ' free'"
+                        th:attr="data-seat-id=${seat.id}"
+                        th:text="${seat.row + '-' + seat.number}"
+                        th:disabled="${seat.reserved}">1-1</button>
+            </div>
+
+            <div class="legend">
+                <span class="legend-item"><span class="legend-dot free"></span>Available</span>
+                <span class="legend-item"><span class="legend-dot selected"></span>Your selection</span>
+                <span class="legend-item"><span class="legend-dot reserved"></span>Reserved</span>
+            </div>
+        </section>
+
+        <aside class="summary-card">
+            <h2>Booking summary</h2>
+            <div class="summary-row">
+                <span class="summary-label">Movie</span>
+                <span class="summary-value" th:text="${screening.film.title}">Film title</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Date</span>
+                <span class="summary-value" th:text="${#temporals.format(screening.startTime, 'MMM d, yyyy')}">Date</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Seats</span>
+                <span class="summary-value" id="summary-seats">None yet</span>
+            </div>
+            <p class="summary-tip">Select the seats you would like to reserve. Reserved seats cannot be selected.</p>
+        </aside>
+    </div>
+</main>
+
+<script>
+    const countInput = document.getElementById('seat-count');
+    const selectedCount = document.getElementById('selected-count');
+    const summarySeats = document.getElementById('summary-seats');
+    const seats = document.querySelectorAll('.seat.free');
+    const form = document.getElementById('reservation-form');
+    const selectedSeatInputs = document.getElementById('selected-seat-inputs');
+    const reserveButton = document.querySelector('.reserve-button');
+
+    function updateCount() {
+        const selected = [...document.querySelectorAll('.seat.selected')];
+        selectedCount.textContent = selected.length;
+        summarySeats.textContent = selected.length ? selected.map((seat) => seat.textContent).join(', ') : 'None yet';
+        selectedSeatInputs.replaceChildren(...selected.map((seat) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'seatIds';
+            input.value = seat.dataset.seatId;
+            return input;
+        }));
+        reserveButton.disabled = selected.length === 0;
+    }
+
+    seats.forEach((seat) => {
+        seat.addEventListener('click', () => {
+            const isSelected = seat.classList.contains('selected');
+            const maximum = Number(countInput.value) || 1;
+            if (!isSelected && document.querySelectorAll('.seat.selected').length >= maximum) return;
+            seat.classList.toggle('selected', !isSelected);
+            seat.classList.toggle('free', isSelected);
+            updateCount();
+        });
+    });
+
+    countInput.addEventListener('change', () => {
+        const maximum = Math.max(1, Math.min(Number(countInput.max), Number(countInput.value) || 1));
+        countInput.value = maximum;
+        [...document.querySelectorAll('.seat.selected')].forEach((seat, index) => {
+            if (index >= maximum) {
+                seat.classList.remove('selected');
+                seat.classList.add('free');
+            }
+        });
+        updateCount();
+    });
+
+    form.addEventListener('submit', (event) => {
+        if (document.querySelectorAll('.seat.selected').length === 0) {
+            event.preventDefault();
+        }
+    });
+</script>
+</body>
+</html>

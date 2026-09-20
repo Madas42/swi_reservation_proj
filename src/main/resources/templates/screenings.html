@@ -3,30 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Absolute Cinema Reservation</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 2rem; }
-        h1 { margin-bottom: 1rem; }
-        .calendar { margin-bottom: 1.5rem; }
-        .screening { padding: 0.6rem; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 0.6rem; }
-    </style>
+    <title>Screenings | Lumiere Cinema</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
-<h1>Select a Screening</h1>
+<header class="site-header">
+    <nav class="nav">
+        <a class="brand" href="/">
+            <span class="brand-mark">L</span>
+            <span class="brand-name">Lumiere Cinema</span>
+        </a>
+        <span class="nav-note">A better seat awaits</span>
+    </nav>
+</header>
 
-<div class="calendar">
-    <label for="date">Choose date:</label>
-    <input type="date" id="date" name="date" th:value="${selectedDate}">
-</div>
+<main class="page">
+    <section class="intro">
+        <div class="eyebrow">Now showing</div>
+        <h1>Make it a movie night.</h1>
+        <p>Choose a screening and find your perfect seat.</p>
+    </section>
 
-<div>
-    <h2>Available screenings</h2>
-    <div th:each="screening : ${screenings}" class="screening">
-        <strong th:text="${screening.filmTitle}">Film title</strong>
-        -
-        <span th:text="${#temporals.format(screening.startTime, 'yyyy-MM-dd HH:mm')}">time</span>
+    <div class="toolbar">
+        <h2>Upcoming screenings</h2>
+        <label class="date-picker" for="date">Date
+            <input type="date" id="date" name="date" th:value="${selectedDate}">
+        </label>
     </div>
-</div>
 
+    <section class="screenings">
+        <a th:each="screening : ${screenings}" class="screening"
+           th:href="@{/screenings/{id}(id=${screening.id})}">
+            <div class="film-poster" aria-hidden="true"
+                 th:text="${#strings.substring(screening.filmTitle, 0, 1)}">I</div>
+            <div>
+                <div class="film-title" th:text="${screening.filmTitle}">Film title</div>
+                <div class="screening-meta">
+                    <strong th:text="${#temporals.format(screening.startTime, 'EEE, MMM d · HH:mm')}">Date and time</strong>
+                    <span> &nbsp;|&nbsp; </span>
+                    <span th:text="${screening.roomName}">Main Hall</span>
+                    <span> &nbsp;|&nbsp; </span>
+                    <span th:text="${screening.availableSeats + ' seats available'}">38 seats available</span>
+                </div>
+            </div>
+            <span class="screening-arrow" aria-hidden="true">→</span>
+        </a>
+        <div th:if="${#lists.isEmpty(screenings)}" class="empty">There are no upcoming screenings.</div>
+    </section>
+</main>
 </body>
 </html>
