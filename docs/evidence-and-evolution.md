@@ -11,3 +11,8 @@ Test prošel, záznam se bez chyb zapsal i načetl a DB vygenerovala ID.
 
 Decision / what changes because of the result:
 Databáze je ověřená a funkční.
+
+Spuštění testu
+``
+mvn test -Dtest=ReservationPersistenceTest
+``
