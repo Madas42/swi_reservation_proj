@@ -1,4 +1,4 @@
-## OP-xx — Create Reservation
+## OP-01 — Create Reservation
 
 Cíl / hodnota pro uživatele: udelat reyervace pro uzivatele. hodnota pro uživatelenavrch uspesna rezervace
 Spouštěcí událost: pozadavek pro vytvoreni rezervace.
@@ -20,25 +20,29 @@ Změna stavu:
 - (none) -> DRAFT
   
 Odkaz na doménová pravidla / invarianty: 
-(none) 
+BR-01 (none) 
 
 Hlavní úspěšný scénář:
-1.
-2.
-3.
+1. uzivatel zada pocet mist na danem promitani a vybere interval sedadel
+2. system validuje uzivatelem zadana data
+3. system vytvari DRAFT rezervace
+4. system vrati ID rezervace a jeho aktualni stav
 ...
 
 Alternativní / chybové výsledky:
-...
+1. Uzivatel zada pocet sedadel mimo povolene rozsahy -> reject ; no Reservation created
+2. Chybejici/chybne kontaktni udaje -> reject ; no Reservation created
 
 Příklady ověření:
-...
+1. Validni udaje plus validni zdroje -> DRAFT created
+2. start rovna se end -> rejected
+3. Nevalidni kontaktni udaje -> rejected
 
-Zdůvodnění / zdroj:
-Předpoklad / neznámá / TBD:
+Zdůvodnění / zdroj: Vytvorit zaznam uzivatelskeho zameru bez alokace zdroju
+Předpoklad / neznámá / TBD: 
 jen pokud je něco skutečně nerozhodnuté
 
-## OP-xx — Check Availability
+## OP-02 — Check Availability Adela
 
 Cíl / hodnota pro uživatele:
 Spouštěcí událost:
@@ -64,7 +68,7 @@ Zdůvodnění / zdroj:
 Předpoklad / neznámá / TBD:
 jen pokud je něco skutečně nerozhodnuté
 
-## OP-xx — Confirm Reservation
+## OP-03 — Confirm Reservation Karolina
 
 Cíl / hodnota pro uživatele:
 Spouštěcí událost:
@@ -90,7 +94,7 @@ Zdůvodnění / zdroj:
 Předpoklad / neznámá / TBD:
 jen pokud je něco skutečně nerozhodnuté
 
-## OP-xx — Cancel Reservation
+## OP-04 — Cancel Reservation Kuba
 
 Cíl / hodnota pro uživatele:
 Spouštěcí událost:
