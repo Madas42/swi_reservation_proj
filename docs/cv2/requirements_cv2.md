@@ -46,28 +46,49 @@ jen pokud je něco skutečně nerozhodnuté
 ## OP-02 — Check Availability Adela
 
 Cíl / hodnota pro uživatele:
+Uživatel potřebuje vidět aktuální mapu sálu pro konkrétní promítání, aby si mohl vybrat volné sedadlo.
+
 Spouštěcí událost:
+Uživatel vybere promítání a systém požaduje zobrazení stavu sedadel
+
 Pozorovatelný požadavek / požadavky:
+REQ-02:
+Pro existující promítání systém vrátí seznam všech sedadel v sále s jejich aktuálním stavem
+
 Předpoklady:
+- Promítání existuje
+- Promítání je v budoucnosti
+  
 Stav po úspěšném provedení:
+- Systém vrátí výsledek dostupnosti (mapu sedadel)
+- Stav žádné rezervace se nemění
+  
 Změna stavu:
+[none] -> [none]
+
 Odkaz na doménová pravidla / invarianty:
+?Jedno sedadlo na jedno promítání může mít max jednu rezervaci
 
 Hlavní úspěšný scénář:
-1.
-2.
-3.
-...
+1. Uživatel zadá požadavek na zjištění dostupnosti pro ID promítání
+2. Systém ověří, že ID promítání existuje
+3. Systém načte všechna sedadla sálu
+4. Systém zkontroluje existující CONFIRMED rezervace pro toto ID promítání
+5. Systém vrátí seznam sedadel AVAILABLE / UNAVAILABLE
 
 Alternativní / chybové výsledky:
-...
+- Promítání neexistuje (neplatné ID) → reject (not found), stav se nemění
+- Promítání je již v minulosti → reject 
 
 Příklady ověření:
-...
+- Existující promítání bez jakýchkoliv rezervací → všechna sedadla vrácena jako AVAILABLE.
+- Existující promítání, kde sedadlo A1 je v CONFIRMED rezervaci → sedadlo A1 UNAVAILABLE, ostatní AVAILABLE.
+- Dotaz na neexistující ID promítání → rejected.
 
 Zdůvodnění / zdroj:
+Uživatel nemůže vytvořit validní rezervaci, pokud neví, které sedadla jsou volné
+
 Předpoklad / neznámá / TBD:
-jen pokud je něco skutečně nerozhodnuté
 
 
 ## OP-03 — Confirm Reservation Karolina
