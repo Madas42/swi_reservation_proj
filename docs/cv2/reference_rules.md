@@ -1,7 +1,6 @@
 BR-01 — Interval semantics
 Reservation intervals use [start,end) semantics.
 
-
 BR-02 — Exclusive Resource invariant
 At no committed system state may two CONFIRMED Reservations overlap
 for the same exclusive Resource.
@@ -14,4 +13,4 @@ BR-04 — Domain-specific rule from C01
 Zruseni rezervace je mozne do 30 minut pred promitanim
 
 BR-05 — Only future change 
-Uzivatel muze vytvorit/upravit/zrusit rezervace na budouci promitani
+Uzivatel muze vytvorit/upravit/zrusit rezervaci pouze na budouci promitani
