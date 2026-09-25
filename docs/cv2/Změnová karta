@@ -1,1 +1,9 @@
-
+1. Create se nemeni
+2. Blokuje PENDING_APPROVAL Resource , ceka na potvrzeni admina
+3. Confirm neni stále okamžitá operace, rozdělí se na žádost a následné schválení.
+4. nový cíl aktéra neVzniká, nevznika nová operace pro uzivatele, ale vznika nova operace pro admina. Tuto operace smí provést admin.
+5. PENDING_APPROVAL Lze zrušit
+6. Potřebujeme PENDING_APPROVAL, REJECTED, EXPIRED, CANCELED
+7. Přibyl nový aktér - admin, Přibyl nový nový cíl - schvalovani rezervace adminem?
+8. Overujeme zpoždění, zamítnutí, vypršení pomoci REZERVACE_STATUS
+9. Uzivatel ceka kdyz mu prijde notifikace o prijate rezervace nebo zamitnute rezervaci
