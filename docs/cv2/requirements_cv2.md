@@ -93,29 +93,66 @@ Předpoklad / neznámá / TBD:
 
 ## OP-03 — Confirm Reservation Karolina
 
-Cíl / hodnota pro uživatele:
-Spouštěcí událost:
-Pozorovatelný požadavek / požadavky:
+Cíl / hodnota pro uživatele: Uživatel potvrzuje dočasnou rezervaci (DRAFT), čímž získá trvalou garanci vybraných sedadel na dané promítání.
+
+
+Spouštěcí událost: Požadavek uživatele na potvrzení/zaplacení existující rezervace (podle ID rezervace).
+
+
+Pozorovatelný požadavek / požadavky: REQ-03: Systém změní stav rezervace z DRAFT na CONFIRMED a trvale zapiše alokaci sedadel pro dané promítání.
+
+
 Předpoklady:
+
+- Rezervace existuje (podle ID)
+- Reservation.state == DRAFT
+- Rezervace nevypršela (časový limit dočasné blokace TTL neuplynul)
+- currentTime < Reservation.start (promítání ještě nezačalo)
+- Sedadla požadovaného intervalu jsou v okamžiku potvrzení stále volná (dle BR-02)
+
 Stav po úspěšném provedení:
-Změna stavu:
+
+- Rezervace je ve stavu CONFIRMED
+- Zdroje (sedadla) jsou trvale zapsány do databáze jako obsazené pro danou rezervaci
+- Změna stavu: DRAFT -> CONFIRMED
+
 Odkaz na doménová pravidla / invarianty:
 
+- BR-01 — Interval semantics: Potvrzení alokuje sedadla v intervalu [start, end)
+- BR-02 — Exclusive Resource invariant: V žádném potvrzeném stavu se nesmí překrývat dvě CONFIRMED rezervace pro stejné sedadlo na totéž promítání
+- BR-05 — Only future change: Potvrdit lze pouze rezervaci na budoucí promítání
+
 Hlavní úspěšný scénář:
-1.
-2.
-3.
-...
+
+1. Uživatel zadá požadavek na potvrzení rezervace (ID rezervace).
+2. Systém ověří, že rezervace existuje a nachází se ve stavu DRAFT.
+3. Systém ověří, že rezervace nevypršela (vypršení dočasného časového limitu TTL).
+4. Systém ověří, že promítání ještě nezačalo (BR-05).
+5. Systém zkontroluje, že žádné ze sedadel v intervalu nebylo mezitím potvrzeno jinou rezervací (BR-02).
+6. Systém nastaví stav rezervace na CONFIRMED.
+7. Systém trvale zapíše alokaci sedadel do databáze.
+8. Systém vrátí ID rezervace a její nový stav CONFIRMED.
+
 
 Alternativní / chybové výsledky:
-...
+
+1. Rezervace neexistuje -> reject, nic se nemění
+2. Rezervace je v jiném stavu než DRAFT (např. již CONFIRMED nebo CANCELLED) -> reject, stav se nemění
+3. Vypršel časový limit rezervace (TTL timeout) -> reject (RESERVATION_EXPIRED), rezervace přechází do CANCELLED
+4. Promítání již začalo (currentTime >= Reservation.start) -> reject (BR-05), stav se nemění
+5. Souběh potvrzení s jinou rezervací na stejná sedadla (detekce kolize dle BR-02): i. První potvrzení proběhne -> druhá rezervace je odmítnuta (reject; CONFIRMED_SEAT_CONFLICT) ii. Souběh Cancel vs Confirm na téže rezervaci -> viz OP-04
 
 Příklady ověření:
-...
 
-Zdůvodnění / zdroj:
-Předpoklad / neznámá / TBD:
-jen pokud je něco skutečně nerozhodnuté
+- DRAFT rezervace v časovém limitu u volných sedadel -> CONFIRMED a sedadla se trvale obsadí
+- Rezervace ve stavu DRAFT po uplynutí časového limitu TTL -> rejected (RESERVATION_EXPIRED)
+- Pokus o opětovné potvrzení již potvrzené rezervace (CONFIRMED) -> rejected
+- Pokus o potvrzení zrušené rezervace (CANCELLED) -> rejected
+- Pokus o potvrzení, kdy jedno ze sedadel v intervalu získala jiná CONFIRMED rezervace -> rejected (BR-02)
+
+Zdůvodnění / zdroj: Dokončit nákupní proces uživatele a zaručit exkluzivitu alokovaných sedadel v databázi bez rizika double-bookingu (BR-02).
+
+Předpoklad / neznámá / TBD: Přesná délka časového limitu (TTL) pro stav DRAFT (např. 10–15 minut od vytvoření) — určí tým/business.
 
 
 ## OP-04 — Cancel Reservation Kuba
