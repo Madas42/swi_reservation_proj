@@ -14,10 +14,10 @@ Změněná podmínka: Kdyz mame vic nez 10 mist, potrebujeme admina na schvaleni
 Dotčené požadavky / části specifikace: zmenilo OP3, ted potrebujeme dodatecne schvaleni admina. 
 Nedotčené požadavky / části + proč: Nemame zmeny, protoze zruseni rezervace zustalo stejne. Nemeni Create, checkavaibility, cancel, protoze zmeny se provadi v v intervalu od jeji vytvoreni az do konecneho stavu vytvorani rezervace.
 Nový aktér / operace, pokud vznikne: nový cíl aktéra neVzniká, nevznika nová operace pro uzivatele, ale vznika nova operace pro admina. Tuto operace smí provést admin.
-Změněná pravidla / význam stavů: pridali jsme 3 nove stavy: vyprseni, EXPIRED, REJECTED, PENDING_APPROVAL
-Změna diagramu případů užití:
-Změna stavového diagramu:
-Nové příklady ověření:
-Architektonické drivery pro C03:
+Změněná pravidla / význam stavů: pridali jsme 3 nove stavy: EXPIRED, REJECTED, PENDING_APPROVAL
+Změna diagramu případů užití: pridani operaci pro admina VALIDATE_RESERVATION
+Změna stavového diagramu: pridali jsme 3 nove stavy: EXPIRED, REJECTED, PENDING_APPROVAL
+Nové příklady ověření: system overuje jestli mista k rezervaci jsou uvolnene pokud doslo k REJECTED/EXPIRED rezervace
+Architektonické drivery pro C03: vytvoreni notifikace pro uzivatele s informaci o tom, jestli byl pozadavek o rezervaci prijat nebo zamitnut adminem
 
 
