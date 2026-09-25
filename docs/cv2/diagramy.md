@@ -10,7 +10,7 @@ DRAFT --confirm [OP-03: state=DRAFT & not expired & no seat conflict (BR-02)]-->
 DRAFT --cancel [OP-04: user request OR TTL expired]--> CANCELLED
 CONFIRMED --cancel [OP-04: cancellation time limit met (BR-03)]--> CANCELLED
 
-![img.png](diagrams/img.png)
+![img.png](diagrams/state_diagram_v1.0.png)
 
 
 9c. Diagram aktivit
