@@ -7,3 +7,17 @@
 7. Přibyl nový aktér - admin, Přibyl nový nový cíl - schvalovani rezervace adminem?
 8. Overujeme zpoždění, zamítnutí, vypršení pomoci REZERVACE_STATUS
 9. Uzivatel ceka kdyz mu prijde notifikace o prijate rezervace nebo zamitnute rezervaci
+
+## Dopad změny C02
+
+Změněná podmínka: Kdyz mame vic nez 10 mist, potrebujeme admina na schvaleni nekterych rezervaci
+Dotčené požadavky / části specifikace: zmenilo OP3, ted potrebujeme dodatecne schvaleni admina. 
+Nedotčené požadavky / části + proč: Nemame zmeny, protoze zruseni rezervace zustalo stejne. Nemeni Create, checkavaibility, cancel, protoze zmeny se provadi v v intervalu od jeji vytvoreni az do konecneho stavu vytvorani rezervace.
+Nový aktér / operace, pokud vznikne: nový cíl aktéra neVzniká, nevznika nová operace pro uzivatele, ale vznika nova operace pro admina. Tuto operace smí provést admin.
+Změněná pravidla / význam stavů: pridali jsme 3 nove stavy: vyprseni, EXPIRED, REJECTED, PENDING_APPROVAL
+Změna diagramu případů užití:
+Změna stavového diagramu:
+Nové příklady ověření:
+Architektonické drivery pro C03:
+
+
