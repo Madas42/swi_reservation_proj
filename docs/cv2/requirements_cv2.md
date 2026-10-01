@@ -218,3 +218,100 @@ Politika zrušení vychází z BR-03, BR-04 a BR-05.
 
 Předpoklad / neznámá / TBD:
 Zda je zrušení CONFIRMED rezervace podmíněno poplatkem/stornem - zatím neřešeno
+
+## OP-05 — Approve / Reject Reservation (Admin Approval)
+
+Cíl / hodnota pro uživatele:
+Admin (manažer kina) rozhoduje o velkých rezervacích (více než 10 míst),
+které po uživatelově „Confirm“ čekají na schválení. Uživatel získá jistotu,
+zda jeho požadavek na velkou rezervaci byl přijat či zamítnut.
+
+Spouštěcí událost:
+Přihlášený admin klikne na tlačítko Approve nebo Reject u rezervace
+ve stavu PENDING_APPROVAL (v admin panelu /admin nebo na detailu rezervace).
+
+Pozorovatelný požadavek / požadavky:
+REQ-05:
+Přihlášený admin může u rezervace ve stavu PENDING_APPROVAL provést
+operaci VALIDATE_RESERVATION:
+- Approve: PENDING_APPROVAL -> CONFIRMED (sedadla zůstávají alokovaná)
+- Reject:  PENDING_APPROVAL -> REJECTED  (alokovaná sedadla se uvolní)
+
+Předpoklady:
+- Admin je přihlášen (HTTP session; přihlášení přes popup z tlačítka
+  se zámečkem v levém dolním rohu každé stránky)
+- Rezervace existuje (podle ID)
+- Reservation.state == PENDING_APPROVAL
+- Rezervace má více než 10 míst (jinak by nikdy do stavu
+  PENDING_APPROVAL nepřešla — viz OP-03 po C02)
+
+Stav po úspěšném provedení:
+- Approve: rezervace je ve stavu CONFIRMED, sedadla zůstávají trvale
+  alokovaná (obsazená) pro dané promítání
+- Reject: rezervace je ve stavu REJECTED, alokovaná sedadla se uvolňují
+  a jsou opět rezervovatelná ostatními uživateli
+
+Změna stavu:
+- PENDING_APPROVAL -> CONFIRMED (Approve)
+- PENDING_APPROVAL -> REJECTED (Reject)
+
+Odkaz na doménová pravidla / invarianty:
+- BR-02 — Exclusive Resource invariant: v potvrzeném stavu se nesmí
+  překrývat dvě CONFIRMED rezervace pro stejné sedadlo na totéž promítání;
+  po C02 se jako obsazená počítají sedadla rezervací ve stavu
+  CONFIRMED *i* PENDING_APPROVAL
+- C02 (Změnová karta): rezervace s více než 10 míst vyžaduje
+  „Potvrzení rezervace více jak 10 míst manažerem“
+
+Hlavní úspěšný scénář:
+1. Admin se přihlásí (username "admin", password "admin") přes
+   přihlašovací popup.
+2. Systém zobrazí admin panel se seznamem všech rezervací
+   ve stavu PENDING_APPROVAL.
+3. Admin u vybrané rezervace klikne na tlačítko Approve.
+4. Systém ověří, že rezervace existuje a je ve stavu PENDING_APPROVAL.
+5. Systém nastaví stav rezervace na CONFIRMED.
+6. Systém ponechá alokaci sedadel beze změny (sedadla zůstávají
+   zapsaná jako reserved_seat).
+7. Systém vrátí ID rezervace a její nový stav CONFIRMED.
+
+Alternativní / chybové výsledky:
+1. Admin klikne Reject -> rezervace přechází do REJECTED,
+   alokovaná sedadla se uvolní
+2. Rezervace neexistuje -> reject, nic se nemění
+3. Rezervace není ve stavu PENDING_APPROVAL (např. CONFIRMED,
+   CANCELLED, REJECTED, EXPIRED — terminální stavy) -> reject,
+   stav se nemění
+4. Operaci se pokusí provést nepřihlášený uživatel -> přesměrování
+   na domovskou stránku, operace se neprovede
+5. Souběh s uživatelovým Cancel: uživatel mezitím rezervaci zrušil
+   (viz OP-04) -> rezervace je CANCELLED, Approve/Reject je odmítnut
+   (nelze rozhodovat o zrušené rezervaci)
+6. Souběh dvou rozhodnutí admina (Approve vs. Reject na téže
+   rezervaci): první operace proběhne, druhá je odmítnuta
+   (stav už není PENDING_APPROVAL)
+
+Příklady ověření:
+1. PENDING_APPROVAL (> 10 míst), admin klikne Approve -> CONFIRMED,
+   sedadla zůstávají obsazená
+2. PENDING_APPROVAL (> 10 míst), admin klikne Reject -> REJECTED,
+   sedadla jsou opět rezervovatelná
+3. Pokus o Approve rezervace ve stavu CONFIRMED -> rejected
+4. Pokus o Reject zrušené (CANCELLED) rezervace -> rejected
+5. Operace bez přihlášení admina -> přesměrování na domovskou stránku
+6. Rezervace ve stavu PENDING_APPROVAL blokuje stejná sedadla
+   i ostatním uživatelům (BR-02) — při vytváření DRAFT i při potvrzení
+7. DRAFT s <= 10 míst -> potvrzení proběhne přímo na CONFIRMED,
+   bez zásahu admina (OP-03 beze změny)
+
+Zdůvodnění / zdroj:
+C02 — Změnová karta: schválení velkých rezervací (více než 10 míst)
+manažerem; implementace v ReservationService.java (approve/reject)
+a AdminController.java (VALIDATE_RESERVATION); pokryto testy
+ReservationLifecycleTest.
+
+Předpoklad / neznámá / TBD:
+Notifikace uživateli o výsledku schválení/zamítnutí je architektonický
+driver pro C03 (zatím neimplementováno — uživatel se o výsledku dozví
+na stránce své rezervace ze stavového odznaku
+PENDING_APPROVAL / CONFIRMED / REJECTED).
