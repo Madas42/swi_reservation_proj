@@ -1,6 +1,6 @@
 9a. Diagram případů užití — aktéři a cíle
 
-
+![img.png](diagrams/usecaseDiagram.png)
 
 
 9b. Stavový diagram životního cyklu Reservation
