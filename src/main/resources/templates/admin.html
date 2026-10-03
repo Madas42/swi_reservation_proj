@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Absolute Cinema</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<header class="site-header">
+    <nav class="nav">
+        <a class="brand" href="/">
+            <span class="brand-mark">AC</span>
+            <span class="brand-name">Absolute Cinema</span>
+        </a>
+        <span class="nav-note">Admin panel</span>
+    </nav>
+</header>
+
+<main class="page">
+    <section class="intro">
+        <div class="eyebrow">Admin</div>
+        <h1>Pending approvals</h1>
+        <p>Reservations with more than 10 seats need admin approval before they are confirmed.</p>
+    </section>
+
+    <div th:if="${adminError}" class="reservation-message error" th:text="${adminError}"></div>
+    <div th:if="${adminSuccess}" class="reservation-message success" th:text="${adminSuccess}"></div>
+
+    <section class="admin-list">
+        <section th:each="item : ${pendingReservations}" class="booking-card admin-item">
+            <div class="screening-info">
+                <div class="eyebrow" th:text="'Reservation #' + ${item.reservation.id}">Reservation #1</div>
+                <h1 th:text="${item.reservation.screening.film.title}">Film title</h1>
+                <p th:text="${#temporals.format(item.reservation.screening.startTime, 'EEE, MMM d · HH:mm')}">Screening time</p>
+                <p th:text="${item.reservation.customer.name}">Customer name</p>
+                <p th:text="${item.reservation.customer.email}">customer@example.com</p>
+                <span class="status-badge pending_approval">PENDING APPROVAL</span>
+            </div>
+            <div class="seat-list">
+                <span class="seat-chip taken" th:each="seat : ${item.seats}"
+                      th:text="${seat.row + '-' + seat.number}">1-1</span>
+            </div>
+            <div class="admin-actions">
+                <form method="post"
+                      th:action="@{/admin/reservations/{id}/approve(id=${item.reservation.id})}">
+                    <button class="reserve-button" type="submit">Approve</button>
+                </form>
+                <form method="post"
+                      th:action="@{/admin/reservations/{id}/reject(id=${item.reservation.id})}">
+                    <button class="cancel-button" type="submit">Reject</button>
+                </form>
+            </div>
+        </section>
+        <div th:if="${#lists.isEmpty(pendingReservations)}" class="empty">
+            There are no reservations awaiting approval.
+        </div>
+    </section>
+</main>
+
+<div th:replace="fragments/admin-access :: adminAccess"></div>
+</body>
+</html>

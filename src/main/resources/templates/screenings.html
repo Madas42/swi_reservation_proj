@@ -51,5 +51,7 @@
         <div th:if="${#lists.isEmpty(screenings)}" class="empty">There are no upcoming screenings.</div>
     </section>
 </main>
+
+<div th:replace="fragments/admin-access :: adminAccess"></div>
 </body>
 </html>

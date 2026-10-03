@@ -1,3 +1,5 @@
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/AdminController.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/AdminModelAdvice.java
 /Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/CinemaReservationApplication.java
 /Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/CinemaRoom.java
 /Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/CinemaRoomRepository.java
@@ -7,6 +9,8 @@
 /Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/FilmRepository.java
 /Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/Reservation.java
 /Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/ReservationRepository.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/ReservationRuleException.java
+/Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/ReservationService.java
 /Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/ReservationStatus.java
 /Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/ReservedSeat.java
 /Users/jakubceska/Documents/VSB/1sem/swi/cv/swi_reservation_proj/src/main/java/com/cinema/reservation/ReservedSeatRepository.java

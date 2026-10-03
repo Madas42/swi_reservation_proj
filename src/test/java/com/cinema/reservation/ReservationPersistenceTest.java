@@ -4,8 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
@@ -28,12 +26,10 @@ class ReservationPersistenceTest {
     private CustomerRepository customerRepository;
     @Autowired
     private ReservationRepository reservationRepository;
-    @Autowired
-    private ReservedSeatRepository reservedSeatRepository;
 
     @Test
     @Transactional
-    void persistsReservationAndLoadsItsSeatsFromDatabase() {
+    void persistsDraftReservationAndLoadsItsRequestedSeatsFromDatabase() {
         Film film = filmRepository.save(new Film("Persistence Test Film", "Test", 90));
         CinemaRoom room = cinemaRoomRepository.save(new CinemaRoom("Persistence Room", 1, 3));
         Screening screening = screeningRepository.save(new Screening(
@@ -47,25 +43,19 @@ class ReservationPersistenceTest {
                 "Persistence User", "persistence@example.com"));
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(30);
         Reservation reservation = reservationRepository.save(new Reservation(
-                customer, screening, ReservationStatus.PENDING, expiresAt));
-        reservedSeatRepository.saveAll(List.of(
-                new ReservedSeat(reservation, seats.get(0)),
-                new ReservedSeat(reservation, seats.get(1))));
+                customer, screening, ReservationStatus.DRAFT, expiresAt));
+        reservation.requestSeats(List.of(seats.get(0), seats.get(1)));
+        reservationRepository.save(reservation);
 
         reservationRepository.flush();
-        reservedSeatRepository.flush();
 
         Reservation loaded = reservationRepository
                 .findByIdAndCustomer_Id(reservation.getId(), customer.getId())
                 .orElseThrow();
-        Set<Long> assignedSeatIds = reservedSeatRepository.findByReservation_Id(loaded.getId())
-                .stream()
-                .map(reservedSeat -> reservedSeat.getSeat().getId())
-                .collect(Collectors.toSet());
 
-        assertThat(loaded.getStatus()).isEqualTo(ReservationStatus.PENDING);
+        assertThat(loaded.getStatus()).isEqualTo(ReservationStatus.DRAFT);
         assertThat(loaded.getExpiresAt()).isAfter(LocalDateTime.now());
-        assertThat(assignedSeatIds).containsExactlyInAnyOrder(
+        assertThat(loaded.getRequestedSeatIds()).containsExactlyInAnyOrder(
                 seats.get(0).getId(), seats.get(1).getId());
     }
 }

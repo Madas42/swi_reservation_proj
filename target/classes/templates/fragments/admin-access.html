@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="adminAccess">
+    <button type="button" class="admin-fab"
+            onclick="document.getElementById('admin-modal').classList.add('open')">&#128274; Admin</button>
+    <div class="admin-modal" id="admin-modal"
+         th:classappend="${adminError != null} ? ' open'"
+         onclick="if (event.target === this) this.classList.remove('open')">
+        <div class="admin-card">
+            <button type="button" class="admin-close"
+                    onclick="document.getElementById('admin-modal').classList.remove('open')">&#215;</button>
+            <h2>Admin access</h2>
+            <div th:if="${adminError}" class="reservation-message error" th:text="${adminError}"></div>
+            <div th:if="${adminSuccess}" class="reservation-message success" th:text="${adminSuccess}"></div>
+            <form th:unless="${isAdmin}" method="post" th:action="@{/admin/login}" class="admin-form">
+                <label>Username
+                    <input type="text" name="username" required autocomplete="username">
+                </label>
+                <label>Password
+                    <input type="password" name="password" required autocomplete="current-password">
+                </label>
+                <button class="reserve-button" type="submit">Log in</button>
+            </form>
+            <div th:if="${isAdmin}" class="admin-logged-in">
+                <a class="reserve-button admin-panel-link" th:href="@{/admin}">Open admin panel</a>
+                <form method="post" th:action="@{/admin/logout}">
+                    <button class="cancel-button" type="submit">Log out</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

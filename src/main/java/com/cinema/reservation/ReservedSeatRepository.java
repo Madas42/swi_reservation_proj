@@ -1,6 +1,7 @@
 package com.cinema.reservation;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Collection;
 import java.util.List;
 
 public interface ReservedSeatRepository extends JpaRepository<ReservedSeat, Long> {
@@ -11,4 +12,12 @@ public interface ReservedSeatRepository extends JpaRepository<ReservedSeat, Long
 
     List<ReservedSeat> findByReservation_Screening_IdAndReservation_Status(
             Long screeningId, ReservationStatus status);
+
+    long countByReservation_Screening_IdAndReservation_StatusIn(
+            Long screeningId, Collection<ReservationStatus> statuses);
+
+    List<ReservedSeat> findByReservation_Screening_IdAndReservation_StatusIn(
+            Long screeningId, Collection<ReservationStatus> statuses);
+
+    void deleteAllByReservation_Id(Long reservationId);
 }

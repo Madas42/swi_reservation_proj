@@ -1,7 +1,10 @@
 package com.cinema.reservation;
 
 public enum ReservationStatus {
-    PENDING,
+    DRAFT,
+    PENDING_APPROVAL,
     CONFIRMED,
+    REJECTED,
+    EXPIRED,
     CANCELLED
 }

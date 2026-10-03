@@ -49,7 +49,7 @@
                     </label>
                 </div>
                 <div id="selected-seat-inputs"></div>
-                <button class="reserve-button" type="submit" disabled>Reserve selected seats</button>
+                <button class="reserve-button" type="submit" disabled>Create draft reservation</button>
             </form>
 
             <div class="screen-label">Screen</div>
@@ -83,7 +83,7 @@
                 <span class="summary-label">Seats</span>
                 <span class="summary-value" id="summary-seats">None yet</span>
             </div>
-            <p class="summary-tip">Select the seats you would like to reserve. Reserved seats cannot be selected.</p>
+            <p class="summary-tip">Select the seats you would like to reserve. Reserved seats cannot be selected. Your reservation is first created as a draft and confirmed in the next step.</p>
         </aside>
     </div>
 </main>
@@ -140,5 +140,6 @@
         }
     });
 </script>
+<div th:replace="fragments/admin-access :: adminAccess"></div>
 </body>
 </html>

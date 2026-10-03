@@ -10,6 +10,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 
 @Entity
 public class Reservation {
@@ -26,6 +28,7 @@ public class Reservation {
     private ReservationStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;
+    private String requestedSeatIds;
 
     protected Reservation() {
     }
@@ -59,7 +62,36 @@ public class Reservation {
         return expiresAt;
     }
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
     public Screening getScreening() {
         return screening;
+    }
+
+    public void requestSeats(List<Seat> seats) {
+        this.requestedSeatIds = seats.stream()
+                .map(seat -> String.valueOf(seat.getId()))
+                .collect(java.util.stream.Collectors.joining(","));
+    }
+
+    public List<Long> getRequestedSeatIds() {
+        if (requestedSeatIds == null || requestedSeatIds.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(requestedSeatIds.split(","))
+                .map(Long::valueOf)
+                .toList();
+    }
+
+    public void setStatus(ReservationStatus status) {
+        this.status = status;
+    }
+
+    public boolean isDraftExpired(LocalDateTime now) {
+        return status == ReservationStatus.DRAFT
+                && expiresAt != null
+                && !now.isBefore(expiresAt);
     }
 }

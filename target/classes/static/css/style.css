@@ -136,6 +136,54 @@ h2 { font-size: 22px; }
 .reserve-button { background: var(--accent); border: 0; border-radius: 9px; color: white; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; padding: 12px 16px; width: 100%; }
 .reserve-button:hover:not(:disabled) { background: var(--accent-dark); }
 .reserve-button:disabled { cursor: not-allowed; opacity: .45; }
+.status-badge { border-radius: 999px; display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .1em; margin-top: 14px; padding: 6px 13px; text-transform: uppercase; }
+.status-badge.draft { background: #fff4e0; color: #a06a12; }
+.status-badge.confirmed { background: #e9f8ef; color: #187244; }
+.status-badge.cancelled { background: #fff0f0; color: #b33842; }
+.status-badge.pending_approval { background: #ecebfa; color: #4435bb; }
+.status-badge.rejected { background: #fff0f0; color: #b33842; }
+.status-badge.expired { background: #e7eaf0; color: #718096; }
+.seat-list { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.seat-chip { border-radius: 7px; color: white; font-size: 12px; font-weight: 700; padding: 8px 13px; }
+.seat-chip.draft { background: var(--green); }
+.seat-chip.taken { background: var(--accent); }
+.expiry-note { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+.reservation-actions { display: grid; gap: 12px; }
+.reservation-actions form { margin: 0; }
+.cancel-button { background: var(--red); border: 0; border-radius: 9px; color: white; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; padding: 12px 16px; width: 100%; }
+.cancel-button:hover { background: #c94a51; }
+.admin-fab {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    bottom: 22px;
+    box-shadow: var(--shadow);
+    color: var(--ink);
+    cursor: pointer;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    left: 22px;
+    padding: 11px 17px;
+    position: fixed;
+    z-index: 40;
+}
+.admin-fab:hover { border-color: #d9d4ff; color: var(--accent); }
+.admin-modal { background: rgba(23, 32, 51, .45); display: none; inset: 0; position: fixed; z-index: 50; }
+.admin-modal.open { display: flex; align-items: center; justify-content: center; }
+.admin-card { background: var(--surface); border-radius: 18px; box-shadow: var(--shadow); margin: 20px; max-width: 360px; padding: 28px; position: relative; width: 100%; }
+.admin-card h2 { font-size: 20px; margin-bottom: 20px; }
+.admin-close { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 22px; line-height: 1; position: absolute; right: 16px; top: 14px; }
+.admin-form { display: grid; gap: 14px; }
+.admin-form label { color: var(--muted); display: grid; font-size: 12px; font-weight: 600; gap: 6px; }
+.admin-form input { border: 1px solid #d9dce7; border-radius: 8px; font: inherit; padding: 10px 11px; }
+.admin-logged-in { display: grid; gap: 12px; }
+.admin-logged-in form { margin: 0; }
+.admin-panel-link { display: block; text-align: center; text-decoration: none; }
+.admin-list { display: grid; gap: 20px; }
+.admin-item .screening-info h1 { font-size: clamp(26px, 3vw, 34px); }
+.admin-actions { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+.admin-actions form { margin: 0; }
 .legend { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; }
 .legend-item { align-items: center; color: var(--muted); display: flex; font-size: 12px; gap: 7px; }
 .legend-dot { border-radius: 4px; height: 12px; width: 12px; }

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservation | Absolute Cinema</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<header class="site-header">
+    <nav class="nav">
+        <a class="brand" href="/">
+            <span class="brand-mark">AC</span>
+            <span class="brand-name">Absolute Cinema</span>
+        </a>
+        <span class="nav-note">Your booking</span>
+    </nav>
+</header>
+
+<main class="page">
+    <a class="back" href="/"><span aria-hidden="true">←</span> All screenings</a>
+    <div class="booking-layout">
+        <section class="booking-card">
+            <div class="screening-info">
+                <div class="eyebrow">Your reservation</div>
+                <h1 th:text="${screening.film.title}">Film title</h1>
+                <p th:text="${#temporals.format(screening.startTime, 'EEE, MMM d · HH:mm')}">Screening time</p>
+                <p th:text="${screening.room.name}">Main Hall</p>
+                <div>
+                    <span class="status-badge"
+                          th:classappend="${#strings.toLowerCase(reservation.status.name())}"
+                          th:text="${reservation.status}">DRAFT</span>
+                </div>
+            </div>
+
+            <div th:if="${reservationError}" class="reservation-message error" th:text="${reservationError}"></div>
+            <div th:if="${reservationSuccess}" class="reservation-message success" th:text="${reservationSuccess}"></div>
+
+            <div class="seat-list">
+                <span class="seat-chip" th:each="seat : ${seats}"
+                      th:classappend="${seat.reserved} ? ' taken' : ' draft'"
+                      th:text="${seat.row + '-' + seat.number}">1-1</span>
+            </div>
+
+            <p class="expiry-note" th:if="${reservation.status.name() == 'DRAFT' and !draftExpired}">
+                Your draft expires at
+                <strong th:text="${#temporals.format(reservation.expiresAt, 'HH:mm')}">18:00</strong>.
+                Confirm it to secure these seats.
+            </p>
+            <p class="expiry-note" th:if="${reservation.status.name() == 'DRAFT' and draftExpired}">
+                This draft reservation has expired. Please create a new one.
+            </p>
+            <p class="expiry-note" th:if="${reservation.status.name() == 'PENDING_APPROVAL'}">
+                Your reservation has more than 10 seats and is awaiting admin approval.
+                You will see the result here.
+            </p>
+            <p class="expiry-note" th:if="${reservation.status.name() == 'REJECTED'}">
+                Your reservation was rejected by the admin. The seats have been released.
+            </p>
+
+            <div class="reservation-actions">
+                <form th:if="${canConfirm}" method="post"
+                      th:action="@{/reservations/{id}/confirm(id=${reservation.id})}">
+                    <button class="reserve-button" type="submit">Confirm reservation</button>
+                </form>
+                <form th:if="${canCancel}" method="post"
+                      th:action="@{/reservations/{id}/cancel(id=${reservation.id})}">
+                    <button class="cancel-button" type="submit">Cancel reservation</button>
+                </form>
+                <form th:if="${canValidate}" method="post"
+                      th:action="@{/admin/reservations/{id}/approve(id=${reservation.id})}">
+                    <button class="reserve-button" type="submit">Approve reservation</button>
+                </form>
+                <form th:if="${canValidate}" method="post"
+                      th:action="@{/admin/reservations/{id}/reject(id=${reservation.id})}">
+                    <button class="cancel-button" type="submit">Reject reservation</button>
+                </form>
+            </div>
+        </section>
+
+        <aside class="summary-card">
+            <h2>Booking summary</h2>
+            <div class="summary-row">
+                <span class="summary-label">Movie</span>
+                <span class="summary-value" th:text="${screening.film.title}">Film title</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Date</span>
+                <span class="summary-value" th:text="${#temporals.format(screening.startTime, 'MMM d, yyyy')}">Date</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Customer</span>
+                <span class="summary-value" th:text="${reservation.customer.name}">Customer name</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Email</span>
+                <span class="summary-value" th:text="${reservation.customer.email}">customer@example.com</span>
+            </div>
+            <p class="summary-tip">Draft reservations are held for a limited time.
+                Reservations can be cancelled until 30 minutes before the screening starts.</p>
+        </aside>
+    </div>
+</main>
+
+<div th:replace="fragments/admin-access :: adminAccess"></div>
+</body>
+</html>

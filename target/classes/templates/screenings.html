@@ -10,7 +10,7 @@
 <header class="site-header">
     <nav class="nav">
         <a class="brand" href="/">
-            <span class="brand-mark">L</span>
+            <span class="brand-mark">AC</span>
             <span class="brand-name">Absolute Cinema</span>
         </a>
         <span class="nav-note">A better seat awaits</span>
@@ -51,5 +51,7 @@
         <div th:if="${#lists.isEmpty(screenings)}" class="empty">There are no upcoming screenings.</div>
     </section>
 </main>
+
+<div th:replace="fragments/admin-access :: adminAccess"></div>
 </body>
 </html>

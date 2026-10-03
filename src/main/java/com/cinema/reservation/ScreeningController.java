@@ -7,10 +7,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.servlet.http.HttpSession;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -20,20 +21,20 @@ public class ScreeningController {
     private final ScreeningRepository screeningRepository;
     private final ReservedSeatRepository reservedSeatRepository;
     private final SeatRepository seatRepository;
-    private final CustomerRepository customerRepository;
     private final ReservationRepository reservationRepository;
+    private final ReservationService reservationService;
 
     public ScreeningController(
             ScreeningRepository screeningRepository,
             ReservedSeatRepository reservedSeatRepository,
             SeatRepository seatRepository,
-            CustomerRepository customerRepository,
-            ReservationRepository reservationRepository) {
+            ReservationRepository reservationRepository,
+            ReservationService reservationService) {
         this.screeningRepository = screeningRepository;
         this.reservedSeatRepository = reservedSeatRepository;
         this.seatRepository = seatRepository;
-        this.customerRepository = customerRepository;
         this.reservationRepository = reservationRepository;
+        this.reservationService = reservationService;
     }
 
     @GetMapping("/")
@@ -48,8 +49,10 @@ public class ScreeningController {
                         screening.getRoom().getName(),
                         screening.getRoom().getCapacity()
                                 - (int) reservedSeatRepository
-                                .countByReservation_Screening_IdAndReservation_Status(
-                                        screening.getId(), ReservationStatus.CONFIRMED)))
+                                .countByReservation_Screening_IdAndReservation_StatusIn(
+                                        screening.getId(),
+                                        List.of(ReservationStatus.CONFIRMED,
+                                                ReservationStatus.PENDING_APPROVAL))))
                 .toList();
 
         model.addAttribute("screenings", screenings);
@@ -58,15 +61,22 @@ public class ScreeningController {
     }
 
     @GetMapping("/screenings/{screeningId}")
-    public String screeningSeats(@PathVariable Long screeningId, Model model) {
+    public String screeningSeats(@PathVariable Long screeningId, Model model,
+                                  RedirectAttributes redirectAttributes) {
         Screening screening = screeningRepository.findById(screeningId).orElse(null);
         if (screening == null) {
             return "redirect:/";
         }
+        if (!screening.getStartTime().isAfter(LocalDateTime.now())) {
+            redirectAttributes.addFlashAttribute("reservationError",
+                    "Seat selection is only available for upcoming screenings.");
+            return "redirect:/";
+        }
 
         Set<Long> reservedSeatIds = reservedSeatRepository
-                .findByReservation_Screening_IdAndReservation_Status(
-                        screeningId, ReservationStatus.CONFIRMED)
+                .findByReservation_Screening_IdAndReservation_StatusIn(
+                        screeningId, List.of(ReservationStatus.CONFIRMED,
+                                ReservationStatus.PENDING_APPROVAL))
                 .stream()
                 .map(reservedSeat -> reservedSeat.getSeat().getId())
                 .collect(Collectors.toSet());
@@ -85,52 +95,98 @@ public class ScreeningController {
     }
 
     @PostMapping("/screenings/{screeningId}/reservations")
-    @Transactional
     public String reserveSeats(
             @PathVariable Long screeningId,
             @RequestParam(required = false) List<Long> seatIds,
             @RequestParam String customerName,
             @RequestParam String customerEmail,
             RedirectAttributes redirectAttributes) {
-        Screening screening = screeningRepository.findById(screeningId).orElse(null);
-        if (screening == null) {
+        try {
+            Reservation reservation = reservationService
+                    .createDraft(screeningId, seatIds, customerName, customerEmail);
+            redirectAttributes.addFlashAttribute("reservationSuccess",
+                    "Draft reservation created. Confirm it within "
+                            + ReservationService.DRAFT_TTL_MINUTES
+                            + " minutes to secure your seats.");
+            return "redirect:/reservations/" + reservation.getId();
+        } catch (ReservationRuleException e) {
+            redirectAttributes.addFlashAttribute("reservationError", e.getMessage());
+            return "redirect:/screenings/" + screeningId;
+        }
+    }
+
+    @GetMapping("/reservations/{reservationId}")
+    public String reservationDetail(@PathVariable Long reservationId, Model model,
+                                    HttpSession session) {
+        Reservation reservation = reservationRepository.findById(reservationId).orElse(null);
+        if (reservation == null) {
             return "redirect:/";
         }
 
-        List<Long> requestedSeatIds = seatIds == null ? List.of() : seatIds.stream().distinct().toList();
-        List<Seat> seats = seatRepository.findAllById(requestedSeatIds);
-        Set<Long> reservedSeatIds = reservedSeatRepository
-                .findByReservation_Screening_IdAndReservation_Status(
-                        screeningId, ReservationStatus.CONFIRMED)
-                .stream()
-                .map(reservedSeat -> reservedSeat.getSeat().getId())
-                .collect(Collectors.toSet());
-
-        boolean validCustomer = !customerName.isBlank() && !customerEmail.isBlank();
-        boolean validSeats = !requestedSeatIds.isEmpty()
-                && seats.size() == requestedSeatIds.size()
-                && seats.stream().allMatch(seat -> seatIdsForRoom(seat, screening))
-                && requestedSeatIds.stream().noneMatch(reservedSeatIds::contains);
-        if (!validCustomer || !validSeats) {
-            redirectAttributes.addFlashAttribute("reservationError",
-                    "Please provide your details and choose only available seats.");
-            return "redirect:/screenings/" + screeningId;
+        List<SeatView> seats;
+        if (reservation.getStatus() == ReservationStatus.CONFIRMED
+                || reservation.getStatus() == ReservationStatus.PENDING_APPROVAL) {
+            seats = reservedSeatRepository.findByReservation_Id(reservationId)
+                    .stream()
+                    .map(reservedSeat -> new SeatView(
+                            reservedSeat.getSeat().getId(),
+                            reservedSeat.getSeat().getRow(),
+                            reservedSeat.getSeat().getNumber(),
+                            true))
+                    .toList();
+        } else {
+            seats = seatRepository.findAllById(reservation.getRequestedSeatIds())
+                    .stream()
+                    .sorted(Comparator.comparing(Seat::getRow).thenComparing(Seat::getNumber))
+                    .map(seat -> new SeatView(seat.getId(), seat.getRow(), seat.getNumber(), false))
+                    .toList();
         }
 
-        Customer customer = customerRepository.save(
-                new Customer(customerName.trim(), customerEmail.trim()));
-        Reservation reservation = reservationRepository.save(
-                new Reservation(customer, screening, ReservationStatus.CONFIRMED));
-        reservedSeatRepository.saveAll(
-                seats.stream().map(seat -> new ReservedSeat(reservation, seat)).toList());
-
-        redirectAttributes.addFlashAttribute("reservationSuccess",
-                "Your seats have been reserved successfully.");
-        return "redirect:/screenings/" + screeningId;
+        LocalDateTime now = LocalDateTime.now();
+        model.addAttribute("reservation", reservation);
+        model.addAttribute("screening", reservation.getScreening());
+        model.addAttribute("seats", seats);
+        model.addAttribute("canConfirm", reservation.getStatus() == ReservationStatus.DRAFT
+                && !reservation.isDraftExpired(now)
+                && reservation.getScreening().getStartTime().isAfter(now));
+        model.addAttribute("draftExpired", reservation.isDraftExpired(now));
+        model.addAttribute("canCancel", reservation.getStatus() == ReservationStatus.DRAFT
+                || reservation.getStatus() == ReservationStatus.PENDING_APPROVAL
+                || reservation.getStatus() == ReservationStatus.CONFIRMED);
+        model.addAttribute("canValidate", AdminController.isLoggedIn(session)
+                && reservation.getStatus() == ReservationStatus.PENDING_APPROVAL);
+        return "reservation";
     }
 
-    private boolean seatIdsForRoom(Seat seat, Screening screening) {
-        return seat.getRoomId().equals(screening.getRoom().getId());
+    @PostMapping("/reservations/{reservationId}/confirm")
+    public String confirmReservation(@PathVariable Long reservationId,
+                                     RedirectAttributes redirectAttributes) {
+        ReservationService.Outcome outcome = reservationService.confirm(reservationId);
+        return reservationRedirect(outcome, "reservationSuccess", "reservationError",
+                redirectAttributes);
+    }
+
+    @PostMapping("/reservations/{reservationId}/cancel")
+    public String cancelReservation(@PathVariable Long reservationId,
+                                    RedirectAttributes redirectAttributes) {
+        ReservationService.Outcome outcome = reservationService.cancel(reservationId);
+        return reservationRedirect(outcome, "reservationSuccess", "reservationError",
+                redirectAttributes);
+    }
+
+    private String reservationRedirect(ReservationService.Outcome outcome,
+                                       String successAttribute, String errorAttribute,
+                                       RedirectAttributes redirectAttributes) {
+        if (outcome.reservation() == null) {
+            redirectAttributes.addFlashAttribute(errorAttribute, outcome.message());
+            return "redirect:/";
+        }
+        if (outcome.success()) {
+            redirectAttributes.addFlashAttribute(successAttribute, outcome.message());
+        } else {
+            redirectAttributes.addFlashAttribute(errorAttribute, outcome.message());
+        }
+        return "redirect:/reservations/" + outcome.reservation().getId();
     }
 
     record ScreeningView(Long id, String filmTitle, LocalDateTime startTime,
