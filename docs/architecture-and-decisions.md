@@ -1,6 +1,6 @@
 ## A1. Scénář a související požadavky / pravidla
 
-**Scénář / operace:** Confirm Reservation (`POST /api/reservations/{id}/confirm`) 
+**Scénář / operace:** Confirm Reservation (`POST /reservations/{reservationId}/confirm`) 
 
 **Požadavky:** 
 - REQ-03 (Potvrzení rezervace)
@@ -8,39 +8,39 @@
 - 
 **Pravidla / invarianty:**
 - BR-01 (Dvě potvrzené rezervace na stejné sedadlo a promítání se nesmí překrývat)
-- BR-02 (Rezervaci lze potvrdit pouze ze stavu PENDING)
+- BR-02 (Rezervaci lze potvrdit pouze ze stavu DRAFT)
 - 
 **Baseline:** v0.2
 
 ## A2. Mapování hlavního průchodu scénáře na kód
 
 1. **Přijetí HTTP požadavku**:
-   * **Kód**: `cz.vsb.cs.swi.reservation.controller.ReservationController.confirmReservation(Long id)`
-   * **Popis**: Controller přijme HTTP POST požadavek na `/api/reservations/{id}/confirm`.
+   * **Kód**: `com.cinema.reservation.ScreeningController.confirmReservation(Long reservationId, RedirectAttributes redirectAttributes)`
+   * **Popis**: Controller přijme HTTP POST požadavek na `/reservations/{reservationId}/confirm`.
 
 2. **Načtení rezervace z databáze**:
-   * **Kód**: `cz.vsb.cs.swi.reservation.service.ReservationService.confirmReservation(Long id)` -> `ReservationRepository.findById(id)`
-   * **Popis**: Servis načte entitu `Reservation` podle ID. Pokud neexistuje, vyhodí výjimku `ResourceNotFoundException`.
+   * **Kód**: `com.cinema.reservation.ReservationService.confirm(Long reservationId)` -> `ReservationRepository.findById(reservationId)`
+   * **Popis**: Servis načte entitu `Reservation` podle ID. Pokud neexistuje, vrátí `ReservationService.Outcome` s neúspěchem.
 
 3. **Kontrola stavu a obchodního pravidla (Invariant BR-02)**:
-   * **Kód**: `cz.vsb.cs.swi.reservation.model.Reservation.confirm()`
-   * **Popis**: Entity kontroluje, zda je aktuální stav `ReservationStatus.PENDING`. Pokud ne, vyhodí `IllegalStateException`.
+   * **Kód**: `com.cinema.reservation.ReservationService.confirm(Long reservationId)`
+   * **Popis**: Service kontroluje, zda je aktuální stav `ReservationStatus.DRAFT`. Pokud ne, vrátí neúspěšný `ReservationService.Outcome`.
 
 4. **Kontrola dostupnosti sedadel / překryvu (Invariant BR-01)**:
-   * **Kód**: `cz.vsb.cs.swi.reservation.service.ReservationService.validateSeatAvailability(Reservation reservation)`
+   * **Kód**: `com.cinema.reservation.ReservationService.blockedSeatIds(Long screeningId)`
    * **Popis**: Servisa ověří, zda vybraná sedadla (`ReservedSeat`) pro dané promítání (`Screening`) již nejsou blokována jinou potvrzenou rezervací.
 
 5. **Změna stavu na CONFIRMED a perzistence**:
-   * **Kód**: `cz.vsb.cs.swi.reservation.model.Reservation.setStatus(ReservationStatus.CONFIRMED)` -> `ReservationRepository.save(reservation)`
+   * **Kód**: `com.cinema.reservation.ReservationService.allocateSeats(Reservation reservation, List<Long> requestedSeatIds)` -> `Reservation.setStatus(ReservationStatus.CONFIRMED)`
    * **Popis**: Stav rezervace je změněn na `CONFIRMED` a uložen do databáze.
 
 6. **Odeslání notifikace (Externí závislost)**:
-   * **Kód**: `cz.vsb.cs.swi.reservation.integration.NotificationServiceClient.sendReservationConfirmedNotification(Reservation reservation)`
-   * **Popis**: Volání externího notifikačního servisu pro informování zákazníka.
+   * **Kód**: `—` (neimplementováno)
+   * **Popis**: Notifikace po potvrzení rezervace nejsou v aktuální implementaci podporovány.
 
 7. **Návrat odpovědi klientovi**:
-   * **Kód**: `cz.vsb.cs.swi.reservation.controller.ReservationController` -> `ResponseEntity.ok(DTO)`
-   * **Popis**: Návrat HTTP 200 OK s aktualizovaným DTO rezervace.
+   * **Kód**: `com.cinema.reservation.ScreeningController` -> `redirect:/reservations/{reservationId}`
+   * **Popis**: Controller přesměruje uživatele na stránku s detailem rezervace.
 
 ## A3. Mapování doplňkové / chybové větve
 
@@ -48,27 +48,27 @@
 
 1. **Vstup**: Klient pošle požadavek na potvrzení rezervace, která má stav `CONFIRMED` nebo `CANCELLED`.
 2. **Detekce chyby**:
-   * **Kód**: `cz.vsb.cs.swi.reservation.model.Reservation.confirm()`
-   * **Mechanism**: Metoda zkontroluje `this.status != ReservationStatus.PENDING` a vyhodí `IllegalStateException("Reservation cannot be confirmed from current state")`.
+   * **Kód**: `com.cinema.reservation.ReservationService.confirm(Long reservationId)`
+   * **Mechanism**: Service zkontroluje `reservation.getStatus() != ReservationStatus.DRAFT` a vrátí `ReservationService.Outcome` s chybovou zprávou.
 3. **Zpracování chyby**:
-   * **Kód**: `cz.vsb.cs.swi.reservation.exception.GlobalExceptionHandler.handleIllegalState(IllegalStateException ex)`
-   * **Výstup**: Výjimka je zachycena v ControllerAdvice a převedena na HTTP status `400 Bad Request` s chybovou zprávou v JSON odpovědi. Databáze zůstane nezměněna.
+   * **Kód**: `com.cinema.reservation.ScreeningController.reservationRedirect(ReservationService.Outcome outcome, String successAttribute, String errorAttribute, RedirectAttributes redirectAttributes)`
+   * **Výstup**: Neúspěšný výsledek je uložen jako flash atribut a uživatel je přesměrován na detail rezervace. Databáze zůstane nezměněna.
 
 
 ## A4. Seznam hlavních částí implementace
 
-* **`ReservationController`**: REST endpointy, mapování DTO a správa HTTP odpovědí.
-* **`ReservationService`**: Aplikační logika, řízení transakcí, koordinace doménové logiky a externích služeb.
-* **`Reservation` (Domain Entity)**: Držitel stavu rezervace a doménových правил přechodu stavů (PENDING -> CONFIRMED / CANCELLED).
+* **`ScreeningController`**: Server-rendered endpointy, zpracování formulářů a přesměrování.
+* **`ReservationService`**: Aplikační logika a řízení transakcí pro vytváření, potvrzení, schválení, zamítnutí a zrušení rezervací.
+* **`Reservation` (Domain Entity)**: Entita rezervace se stavem a požadovanými sedadly.
 * **`ReservationRepository`**: Rozhraní Spring Data JPA pro perzistenci a dotazování nad entitou `Reservation`.
-* **`NotificationServiceClient`**: Komponenta pro REST/HTTP integraci s externím notifikačním systémem.
+* **Notifikační služba**: Neimplementováno.
 
 ## A5. Stav, změna stavu a pravidlo
 
 * **Kde je stav uložen**: Fyzicky v relaci DB tabulky `reservations` (sloupec `status`). V běžící aplikaci v doménové entitě `Reservation.status`.
-* **Kdo rozhoduje o změně stavu**: Doménová entita `Reservation` ve své metodě `confirm()`.
+* **Kdo rozhoduje o změně stavu**: `ReservationService` pomocí `Reservation.setStatus(ReservationStatus)`.
 * **Kde se vynucuje business pravidlo (BR-01 / BR-02)**: 
-  * Pravidlo stavového přechodu (BR-02) se vynucuje přímo uvnitř entity `Reservation`.
+  * Pravidlo stavového přechodu (BR-02) se vynucuje v `ReservationService.confirm(Long reservationId)`.
   * Pravidlo nepřípustnosti překryvu sedadel (BR-01) se vynucuje v `ReservationService` před změnou stavu.
 
 
@@ -77,7 +77,7 @@
 | Závislost | Typ | Bod integrace v kódu | Použitá metoda / rozhraní |
 | :--- | :--- | :--- | :--- |
 | **Relační databáze (H2 / PostgreSQL)** | Perzistenční | `ReservationRepository` | Spring Data JPA (`findById`, `save`) |
-| **Notification Service** | Externí HTTP API | `NotificationServiceClient` | `RestTemplate` / `WebClient` (`POST /api/notifications`) |
+| **Notification Service** | Neimplementováno | — | — |
 
 
 
@@ -89,5 +89,3 @@
 ## A8. Architektonická otázka pro další návrh
 
 > **Otázka**: Jakým způsobem zajistíme konzistenci a zabráníme race condition (souběžným požadavkům na potvrzení/rezervaci stejného sedadla na stejné promítání v jeden okamžik), pokud databázová kontrola v `ReservationService` probíhá na úrovni aplikační logiky bez použití pesimistického/optimistického zamykání nebo databázových unikátních indexů?
-
-
