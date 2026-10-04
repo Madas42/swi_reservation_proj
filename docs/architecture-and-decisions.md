@@ -72,4 +72,16 @@
   * Pravidlo nepřípustnosti překryvu sedadel (BR-01) se vynucuje v `ReservationService` před změnou stavu.
 
 
+## A6. Relevantní externí a perzistenční závislosti
+
+| Závislost | Typ | Bod integrace v kódu | Použitá metoda / rozhraní |
+| :--- | :--- | :--- | :--- |
+| **Relační databáze (H2 / PostgreSQL)** | Perzistenční | `ReservationRepository` | Spring Data JPA (`findById`, `save`) |
+| **Notification Service** | Externí HTTP API | `NotificationServiceClient` | `RestTemplate` / `WebClient` (`POST /api/notifications`) |
+
+
+## A8. Architektonická otázka pro další návrh
+
+> **Otázka**: Jakým způsobem zajistíme konzistenci a zabráníme race condition (souběžným požadavkům na potvrzení/rezervaci stejného sedadla na stejné promítání v jeden okamžik), pokud databázová kontrola v `ReservationService` probíhá na úrovni aplikační logiky bez použití pesimistického/optimistického zamykání nebo databázových unikátních indexů?
+
 
