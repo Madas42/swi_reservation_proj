@@ -83,7 +83,7 @@
 
 ## A7. Nakreslete AS-IS strukturální diagram
 
-![asisdiagram](cv2/diagrams/as_is_diagram.jpeg)
+![asisdiagram](cv3/as_is_diagram.jpeg)
 
 
 ## A8. Architektonická otázka pro další návrh

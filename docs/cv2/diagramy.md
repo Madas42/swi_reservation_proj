@@ -14,4 +14,4 @@ CONFIRMED --cancel [OP-04: cancellation time limit met (BR-03)]--> CANCELLED
 
 
 9c. Diagram aktivit
-![img.png](../cv3/diagramaktivit.png)
+![img.png](diagrams/diagramaktivit.png)
