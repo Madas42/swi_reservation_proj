@@ -25,10 +25,13 @@
     </section>
 
     <div class="toolbar">
-        <h2>Upcoming screenings</h2>
-        <label class="date-picker" for="date">Date
-            <input type="date" id="date" name="date" th:value="${selectedDate}">
-        </label>
+        <h2 th:text="'Upcoming screenings · ' + ${#temporals.format(selectedDate, 'EEEE, d. M. yyyy')}">Upcoming screenings</h2>
+        <form class="date-picker" th:action="@{/}" method="get">
+            <label for="date">Date
+                <input type="date" id="date" name="date" th:value="${selectedDate}"
+                       onchange="this.form.submit()">
+            </label>
+        </form>
     </div>
 
     <section class="screenings">
@@ -48,7 +51,7 @@
             </div>
             <span class="screening-arrow" aria-hidden="true">→</span>
         </a>
-        <div th:if="${#lists.isEmpty(screenings)}" class="empty">There are no upcoming screenings.</div>
+        <div th:if="${#lists.isEmpty(screenings)}" class="empty">There are no screenings on this date.</div>
     </section>
 </main>
 

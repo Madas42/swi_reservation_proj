@@ -6,4 +6,8 @@ import java.util.List;
 
 public interface ScreeningRepository extends JpaRepository<Screening, Long> {
     List<Screening> findByStartTimeAfterOrderByStartTime(LocalDateTime time);
+
+    List<Screening> findByStartTimeBetweenOrderByStartTime(LocalDateTime start, LocalDateTime end);
+
+    List<Screening> findByFilm_IdAndStartTimeBetween(Long filmId, LocalDateTime start, LocalDateTime end);
 }

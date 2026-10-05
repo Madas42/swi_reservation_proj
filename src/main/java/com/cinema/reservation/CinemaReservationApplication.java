@@ -4,7 +4,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.annotation.Order;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -16,21 +18,21 @@ public class CinemaReservationApplication {
     }
 
     @Bean
+    @Order(1)
     CommandLineRunner seedDatabase(
             FilmRepository filmRepository,
             CinemaRoomRepository roomRepository,
-            SeatRepository seatRepository,
-            ScreeningRepository screeningRepository) {
+            SeatRepository seatRepository) {
         return args -> {
             if (filmRepository.count() > 0) {
                 return;
             }
 
-            Film interstellar = filmRepository.save(new Film(
+            filmRepository.save(new Film(
                     "Interstellar", "A journey beyond the stars.", 169));
-            Film inception = filmRepository.save(new Film(
+            filmRepository.save(new Film(
                     "Inception", "A thief who enters the dreams of others.", 148));
-            Film darkKnight = filmRepository.save(new Film(
+            filmRepository.save(new Film(
                     "The Dark Knight", "Batman faces a criminal mastermind.", 152));
 
             CinemaRoom room = roomRepository.save(new CinemaRoom("Main Hall", 5, 8));
@@ -39,21 +41,47 @@ public class CinemaReservationApplication {
                     .flatMap(row -> IntStream.rangeClosed(1, 8)
                             .mapToObj(number -> new Seat(room, row, number)))
                     .toList());
-
-            LocalDateTime tomorrow = LocalDateTime.now().plusDays(1).withSecond(0).withNano(0);
-            screeningRepository.save(new Screening(
-                    interstellar, room, tomorrow.withHour(18).withMinute(0),
-                    tomorrow.withHour(20).withMinute(49)));
-            screeningRepository.save(new Screening(
-                    inception, room, tomorrow.plusDays(1).withHour(20).withMinute(30),
-                    tomorrow.plusDays(1).withHour(22).withMinute(58)));
-            screeningRepository.save(new Screening(
-                    darkKnight, room, tomorrow.plusDays(2).withHour(17).withMinute(45),
-                    tomorrow.plusDays(2).withHour(20).withMinute(17)));
         };
     }
 
     @Bean
+    @Order(2)
+    CommandLineRunner seedDailyScreenings(
+            FilmRepository filmRepository,
+            CinemaRoomRepository roomRepository,
+            ScreeningRepository screeningRepository) {
+        return args -> {
+            List<CinemaRoom> rooms = roomRepository.findAll();
+            if (rooms.isEmpty()) {
+                return;
+            }
+            CinemaRoom room = rooms.get(0);
+            for (Film film : filmRepository.findAll()) {
+                for (int day = 1; day <= 7; day++) {
+                    LocalDateTime dayStart = LocalDate.now().plusDays(day).atStartOfDay();
+                    if (!screeningRepository.findByFilm_IdAndStartTimeBetween(
+                            film.getId(), dayStart, dayStart.plusDays(1)).isEmpty()) {
+                        continue;
+                    }
+                    LocalDateTime start = dayStart.plusHours(startHourOf(film.getTitle()));
+                    screeningRepository.save(new Screening(
+                            film, room, start, start.plusMinutes(film.getDurationMinutes())));
+                }
+            }
+        };
+    }
+
+    private static int startHourOf(String title) {
+        return switch (title) {
+            case "The Dark Knight" -> 15;
+            case "Interstellar" -> 18;
+            case "Inception" -> 21;
+            default -> 12;
+        };
+    }
+
+    @Bean
+    @Order(3)
     CommandLineRunner seedExampleReservation(
             CustomerRepository customerRepository,
             ReservationRepository reservationRepository,

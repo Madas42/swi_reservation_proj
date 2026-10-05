@@ -11,6 +11,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import jakarta.servlet.http.HttpSession;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -38,10 +39,14 @@ public class ScreeningController {
     }
 
     @GetMapping("/")
-    public String screenings(Model model) {
+    public String screenings(@RequestParam(required = false) String date, Model model) {
+        LocalDate selectedDate = parseDateOrDefault(date);
+        LocalDateTime dayStart = selectedDate.atStartOfDay();
+        LocalDateTime dayEnd = dayStart.plusDays(1);
         List<ScreeningView> screenings = screeningRepository
-                .findByStartTimeAfterOrderByStartTime(LocalDateTime.now())
+                .findByStartTimeBetweenOrderByStartTime(dayStart, dayEnd)
                 .stream()
+                .filter(screening -> screening.getStartTime().isAfter(LocalDateTime.now()))
                 .map(screening -> new ScreeningView(
                         screening.getId(),
                         screening.getFilm().getTitle(),
@@ -56,8 +61,19 @@ public class ScreeningController {
                 .toList();
 
         model.addAttribute("screenings", screenings);
-        model.addAttribute("selectedDate", LocalDate.now());
+        model.addAttribute("selectedDate", selectedDate);
         return "screenings";
+    }
+
+    private LocalDate parseDateOrDefault(String date) {
+        if (date == null || date.isBlank()) {
+            return LocalDate.now();
+        }
+        try {
+            return LocalDate.parse(date);
+        } catch (DateTimeParseException e) {
+            return LocalDate.now();
+        }
     }
 
     @GetMapping("/screenings/{screeningId}")
