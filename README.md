@@ -7,6 +7,13 @@ mvn spring-boot:run
 Open on localhost:
 http://localhost:8080/
 
+## Running tests
+```
+mvn test
+```
+Runs all tests (`ReservationPersistenceTest`, `ReservationLifecycleTest`)
+against the real H2 database; tests are transactional and rolled back.
+
 ## Database
 
 The application uses an H2 file database stored in `./data/cinema-reservation`.

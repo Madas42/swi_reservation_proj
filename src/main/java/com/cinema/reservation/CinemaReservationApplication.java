@@ -5,12 +5,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.Order;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.IntStream;
 
+@EnableScheduling
 @SpringBootApplication
 public class CinemaReservationApplication {
     public static void main(String[] args) {

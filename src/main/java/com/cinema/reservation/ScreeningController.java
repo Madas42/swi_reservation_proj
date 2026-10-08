@@ -15,27 +15,26 @@ import java.time.format.DateTimeParseException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Controller
 public class ScreeningController {
     private final ScreeningRepository screeningRepository;
-    private final ReservedSeatRepository reservedSeatRepository;
     private final SeatRepository seatRepository;
     private final ReservationRepository reservationRepository;
-    private final ReservationService reservationService;
+    private final SeatAvailability seatAvailability;
+    private final ReservationManagement reservationManagement;
 
     public ScreeningController(
             ScreeningRepository screeningRepository,
-            ReservedSeatRepository reservedSeatRepository,
             SeatRepository seatRepository,
             ReservationRepository reservationRepository,
-            ReservationService reservationService) {
+            SeatAvailability seatAvailability,
+            ReservationManagement reservationManagement) {
         this.screeningRepository = screeningRepository;
-        this.reservedSeatRepository = reservedSeatRepository;
         this.seatRepository = seatRepository;
         this.reservationRepository = reservationRepository;
-        this.reservationService = reservationService;
+        this.seatAvailability = seatAvailability;
+        this.reservationManagement = reservationManagement;
     }
 
     @GetMapping("/")
@@ -53,11 +52,7 @@ public class ScreeningController {
                         screening.getStartTime(),
                         screening.getRoom().getName(),
                         screening.getRoom().getCapacity()
-                                - (int) reservedSeatRepository
-                                .countByReservation_Screening_IdAndReservation_StatusIn(
-                                        screening.getId(),
-                                        List.of(ReservationStatus.CONFIRMED,
-                                                ReservationStatus.PENDING_APPROVAL))))
+                                - (int) seatAvailability.heldSeatCount(screening.getId())))
                 .toList();
 
         model.addAttribute("screenings", screenings);
@@ -89,13 +84,7 @@ public class ScreeningController {
             return "redirect:/";
         }
 
-        Set<Long> reservedSeatIds = reservedSeatRepository
-                .findByReservation_Screening_IdAndReservation_StatusIn(
-                        screeningId, List.of(ReservationStatus.CONFIRMED,
-                                ReservationStatus.PENDING_APPROVAL))
-                .stream()
-                .map(reservedSeat -> reservedSeat.getSeat().getId())
-                .collect(Collectors.toSet());
+        Set<Long> reservedSeatIds = seatAvailability.checkAvailability(screeningId);
 
         List<SeatView> seats = seatRepository
                 .findByRoom_IdOrderByRowAscNumberAsc(screening.getRoom().getId())
@@ -118,11 +107,11 @@ public class ScreeningController {
             @RequestParam String customerEmail,
             RedirectAttributes redirectAttributes) {
         try {
-            Reservation reservation = reservationService
+            Reservation reservation = reservationManagement
                     .createDraft(screeningId, seatIds, customerName, customerEmail);
             redirectAttributes.addFlashAttribute("reservationSuccess",
                     "Draft reservation created. Confirm it within "
-                            + ReservationService.DRAFT_TTL_MINUTES
+                            + ReservationManagement.DRAFT_TTL_MINUTES
                             + " minutes to secure your seats.");
             return "redirect:/reservations/" + reservation.getId();
         } catch (ReservationRuleException e) {
@@ -142,7 +131,7 @@ public class ScreeningController {
         List<SeatView> seats;
         if (reservation.getStatus() == ReservationStatus.CONFIRMED
                 || reservation.getStatus() == ReservationStatus.PENDING_APPROVAL) {
-            seats = reservedSeatRepository.findByReservation_Id(reservationId)
+            seats = seatAvailability.allocationOf(reservationId)
                     .stream()
                     .map(reservedSeat -> new SeatView(
                             reservedSeat.getSeat().getId(),
@@ -177,7 +166,7 @@ public class ScreeningController {
     @PostMapping("/reservations/{reservationId}/confirm")
     public String confirmReservation(@PathVariable Long reservationId,
                                      RedirectAttributes redirectAttributes) {
-        ReservationService.Outcome outcome = reservationService.confirm(reservationId);
+        ReservationManagement.Outcome outcome = reservationManagement.confirm(reservationId);
         return reservationRedirect(outcome, "reservationSuccess", "reservationError",
                 redirectAttributes);
     }
@@ -185,12 +174,12 @@ public class ScreeningController {
     @PostMapping("/reservations/{reservationId}/cancel")
     public String cancelReservation(@PathVariable Long reservationId,
                                     RedirectAttributes redirectAttributes) {
-        ReservationService.Outcome outcome = reservationService.cancel(reservationId);
+        ReservationManagement.Outcome outcome = reservationManagement.cancel(reservationId);
         return reservationRedirect(outcome, "reservationSuccess", "reservationError",
                 redirectAttributes);
     }
 
-    private String reservationRedirect(ReservationService.Outcome outcome,
+    private String reservationRedirect(ReservationManagement.Outcome outcome,
                                        String successAttribute, String errorAttribute,
                                        RedirectAttributes redirectAttributes) {
         if (outcome.reservation() == null) {

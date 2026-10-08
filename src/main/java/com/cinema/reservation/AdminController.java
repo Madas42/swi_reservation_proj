@@ -14,8 +14,9 @@ import java.util.List;
 
 /**
  * Admin actor from change card C02: login, the admin panel listing
- * reservations awaiting approval, and the VALIDATE_RESERVATION operation
- * (approve / reject of PENDING_APPROVAL reservations).
+ * reservations awaiting approval, and the VALIDATE_RESERVATION operation.
+ * The approve/reject transitions are requested from the Approval Workflow,
+ * which owns the PENDING_APPROVAL state.
  */
 @Controller
 public class AdminController {
@@ -24,15 +25,15 @@ public class AdminController {
     static final String ADMIN_PASSWORD = "admin";
 
     private final ReservationRepository reservationRepository;
-    private final ReservedSeatRepository reservedSeatRepository;
-    private final ReservationService reservationService;
+    private final SeatAvailability seatAvailability;
+    private final ApprovalWorkflow approvalWorkflow;
 
     public AdminController(ReservationRepository reservationRepository,
-                           ReservedSeatRepository reservedSeatRepository,
-                           ReservationService reservationService) {
+                           SeatAvailability seatAvailability,
+                           ApprovalWorkflow approvalWorkflow) {
         this.reservationRepository = reservationRepository;
-        this.reservedSeatRepository = reservedSeatRepository;
-        this.reservationService = reservationService;
+        this.seatAvailability = seatAvailability;
+        this.approvalWorkflow = approvalWorkflow;
     }
 
     static boolean isLoggedIn(HttpSession session) {
@@ -71,7 +72,7 @@ public class AdminController {
                 .stream()
                 .map(reservation -> new PendingView(
                         reservation,
-                        reservedSeatRepository.findByReservation_Id(reservation.getId())
+                        seatAvailability.allocationOf(reservation.getId())
                                 .stream()
                                 .map(reservedSeat -> new ScreeningController.SeatView(
                                         reservedSeat.getSeat().getId(),
@@ -91,7 +92,7 @@ public class AdminController {
         if (!isLoggedIn(session)) {
             return "redirect:/";
         }
-        ReservationService.Outcome outcome = reservationService.approve(reservationId);
+        ReservationManagement.Outcome outcome = approvalWorkflow.approve(reservationId);
         flash(redirectAttributes, outcome);
         return "redirect:/admin";
     }
@@ -103,12 +104,13 @@ public class AdminController {
         if (!isLoggedIn(session)) {
             return "redirect:/";
         }
-        ReservationService.Outcome outcome = reservationService.reject(reservationId);
+        ReservationManagement.Outcome outcome = approvalWorkflow.reject(reservationId);
         flash(redirectAttributes, outcome);
         return "redirect:/admin";
     }
 
-    private void flash(RedirectAttributes redirectAttributes, ReservationService.Outcome outcome) {
+    private void flash(RedirectAttributes redirectAttributes,
+                       ReservationManagement.Outcome outcome) {
         if (outcome.success()) {
             redirectAttributes.addFlashAttribute("adminSuccess", outcome.message());
         } else {
