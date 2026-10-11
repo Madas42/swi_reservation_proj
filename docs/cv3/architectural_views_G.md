@@ -1,10 +1,10 @@
 #Architectural Views (G)
 
 ##G1 - Context diagram
-![Context Diagram](diagrams/diagram contexxt system.png)
+![img.png](diagrams/diagram contexxt system.png)
 
 ##G2 - To-Be diagram
-![Context Diagram](diagrams/tobe_diagram.png)
+![img.png](diagrams/tobe_diagram.png)
 
 ##G3 - Ownership přechodů
 | Přechod                       | Owner rozhodnutí         | Kdo může transition pouze vyžádat |
@@ -15,4 +15,4 @@
 
 
 ##G4 - Runtime/Deployment mapping
-![Context Diagram](diagrams/runtime_deployment mapping.png)
+![img.png](diagrams/runtime_deployment mapping.png)
