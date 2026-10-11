@@ -2,7 +2,7 @@
 
 ## G1 - Context diagram
 
-![img.png](diagrams/diagram-contexxt-system.png)
+![img.png](diagrams/diagram%20contexxt%20system.png)
 
 ## G2 - To-Be diagram
 
@@ -18,4 +18,4 @@
 
 ## G4 - Runtime/Deployment mapping
 
-![img.png](diagrams/runtime_deployment-mapping.png)
+![img.png](diagrams/runtime_deployment%20mapping.png)
