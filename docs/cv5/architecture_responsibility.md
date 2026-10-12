@@ -57,26 +57,26 @@ Relevant business rule(s):
 - `INVALID_INPUT` (Sedadlo v daném sále vůbec neexistuje).
 
 
-  ## 5 — Odvoďte unit/component testy z DD
+## 5 — Odvoďte unit/component testy z DD
 
 ### Přehled odvozených testů
 
 | DD element / decision | What must hold? | Test level | Test case |
 |---|---|---|---|
-| Interface contract (`ReservationPolicy`) | Vrací výsledek validace administrátora a ověřuje oprávnění | unit | `testAdminValidationPolicySuccess()` |
-| Algorithm branch (BR-02 conflict) | Vyhodnotí překryv termínů a vyvolá výjimku při kolizi | component / unit | `testConflictDetectionTriggersException()` |
-| State transition (`Reservation::confirm()`) | Stav se úspěšně změní z DRAFT/PENDING na CONFIRMED | unit | `testValidStateTransitionToConfirmed()` |
-| Failure behavior (`IllegalStateException`) | Zabrání neplatnému přechodu stavu a hodí chybu | unit | `testInvalidStateTransitionFails()` |
-| Collaboration (`ReservationService` + Repo) | Zajišťuje transakční zápis a persistenci vytvořeného draftu | component / integration | `testServicePersistsDraftSuccessfully()` |
+| Interface contract (`SeatAvailability`) | Úspěšně alokuje sedadla pro platný screening, neprázdný seznam a DRAFT rezervaci | unit / component | `testAllocateSeatsSuccess()` |
+| Algorithm branch (BR-02 / conflict) | Vyhodí chybu `SEAT_ALREADY_TAKEN`, pokud se o alokaci pokusil jiný proces dříve | component / unit | `testAllocateSeatsAlreadyTakenThrowsException()` |
+| Precondition / validation | Vyhodí `INVALID_INPUT`, pokud požadované sedadlo v daném sále neexistuje | unit | `testAllocateSeatsInvalidSeatThrowsException()` |
+| Future screening check (BR-05) | Odmítne alokaci pro promítání, které se neodehrává v budoucnosti | unit | `testAllocateSeatsPastScreeningFails()` |
+| Collaboration (`ReservationService` + `SeatAvailability`) | Zajistí transakční alokaci sedadel a propojení s konkrétní rezervací | integration | `testServiceAllocatesSeatsAndPersists()` |
 
 ### Detailní zdůvodnění vybraných testů
 
-#### 1. Test pro Algorithm branch (BR-02 conflict)
+#### 1. Test pro Algorithm branch (`SEAT_ALREADY_TAKEN` / BR-02)
 * **Selected level:** Component / Unit test
-* **Why this level:** Pravidlo BR-02 zajišťuje klíčový business invariant (zamezení překryvu rezervací)[cite: 1, 2]. Test na této úrovni nejlépe ověří chování logiky detekce konfliktů bez nutnosti spouštět celou webovou vrstvu, přičemž spolehlivě odhalí chyby v algoritmickém porovnávání intervalů.
-* **What design decision does this test verify?** Ověřuje správnost navrženého algoritmu pro kontrolu dostupnosti a vynucení konzistence v komponentě `Reservation Management`.
+* **Why this level:** Pravidlo zamezení duplicitní alokace stejného sedadla pro stejný screening je klíčovým invariantem rezervačního systému[cite: 1, 2, 3]. Test ověřuje, že při souběžném pokusu o alokaci systém správně zachytí konflikt, zabrání dvojité rezervaci a vrátí očekávaný chybový stav.
+* **What design decision does this test verify?** Ověřuje dodržení kontraktu rozhraní `SeatAvailability` a odolnost vůči race conditions (konfliktním zápisům) na úrovni alokace sedadel.
 
-#### 2. Test pro State transition (`Reservation::confirm()`)
+#### 2. Test pro Precondition / Invalid Input (`INVALID_INPUT`)
 * **Selected level:** Unit test
-* **Why this level:** Životní cyklus doménové entitě `Reservation` je čistě doménovou zodpovědností. Unit test přímo na entitě zaručuje, že zapouzdření stavů a přechodů funguje izolovaně od databáze či frameworku.
-* **What design decision does this test verify?** Ověřuje návrhový záměr, že stavy a přechody vlastní výhradně doménová entita (`Reservation`), čímž se zamezí obcházení pravidel z aplikační vrstvy.
+* **Why this level:** Ověření vstupních podmínek (preconditions) zajišťuje, že systém selže včas a bezpečně předtím, než se pokusí pracovat s neexistujícími daty v databázi[cite: 3]. Unit test isolovaně prověří reakci na neplatná ID sedadel.
+* **What design decision does this test verify?** Ověřuje splnění předpokladů rozhraní `SeatAvailability` a správné ošetření neplatných vstupních parametrů.
