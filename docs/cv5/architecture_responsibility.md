@@ -33,3 +33,25 @@ Relevant business rule(s):
 | **Confirmation** | `ReservationManagement` a `SeatAvailability` | `Reservation` (CONFIRMED / PENDING), `AllocatedSeat` | `ReservationManagement` řídí proces a změnu stavu. `SeatAvailability` je zavolána k trvalému zápisu alokace a garantuje BR-02 (zabraňuje overbookingu). |
 | **Cancellation** | `ReservationManagement` a `SeatAvailability` | `Reservation` (stav CANCELLED) | `ReservationManagement` hlídá 30minutový deadline a idempotenci. Pokud je storno úspěšné, zavolá `SeatAvailability` pro uvolnění sedadel. |
 | **Admin validation** | `ApprovalWorkflow` | `Reservation` (přechod z PENDING na CONFIRMED / REJECTED) | Striktně odděluje admin schvalování (REQ-05) od běžného toku. Při REJECTED se postará o uvolnění sedadel. |
+
+
+### Key interface(s) / contract(s)
+
+`<<interface>> SeatAvailability`
+
+`allocateSeats(screeningId, seatIds, reservationId) : AllocationResult`
+
+**Contract:**
+
+**Preconditions:**
+- `screeningId` a `seatIds` jsou platné a nejsou prázdné.
+- Promítání se odehrává v budoucnosti (odvozeno z BR-05).
+- Rezervace je aktuálně ve stavu DRAFT.
+
+**Postcondition:**
+- `AllocationResult` obsahuje potvrzení o úspěchu.
+- Všechna požadovaná sedadla z `seatIds` jsou exkluzivně a trvale zapsána pro dané `screeningId` a `reservationId`. Žádný jiný proces je nemůže alokovat.
+
+**Failures:**
+- `SEAT_ALREADY_TAKEN` (Porušení BR-02: o alokaci se ve stejný čas pokusil někdo jiný a byl rychlejší).
+- `INVALID_INPUT` (Sedadlo v daném sále vůbec neexistuje).
