@@ -5,7 +5,7 @@ Related requirement(s):
 - REQ-03: Systém změní stav rezervace z DRAFT na CONFIRMED a trvale zapiše alokaci sedadel pro dané promítání.
 - REQ-05 — Approve / Reject Reservation (Admin Approval)
   
-Related scenario(s): zpracování stavu rezervace
+Related scenario(s): OP-01 (CREATE), OP-03 (CONFIRM), OP-04 (CANCEL), OP-05 (APPROVE / REJECT)
 
 Relevant business rule(s):
 - BR-02 — Exclusive Resource invariant At no committed system state may two CONFIRMED Reservations overlap for the same exclusive Resource.
