@@ -22,3 +22,12 @@ Relevant business rule(s):
 | Confirmation — ověření čerstvosti DRAFT a budoucnosti promítání, rozhodnutí přímé potvrzení vs. schválení adminem, spuštění alokace sedadel | Dokončuje nákupní proces (REQ-03); DRAFT -> CONFIRMED (<= 10 míst) nebo DRAFT -> PENDING_APPROVAL (> 10 míst, C02); BR-02 a BR-05 se musí ověřit před zápisem alokace |
 | Cancellation — kontrola stavu a 30minutového deadline, idempotentní opakované zrušení, uvolnění sedadel                                     | Umožňuje uživateli odstoupit od záměru (OP-04); BR-03 idempotence, BR-04 deadline, BR-05 budoucí promítání; uvolněná sedadla se zpřístupní ostatním                   |
 | Admin validation — schválení/zamítnutí PENDING_APPROVAL (> 10 míst), uvolnění sedadel při rejectu                                           | Řízeno změnovou kartou C02 (REQ-05); PENDING_APPROVAL -> CONFIRMED (sedadla zůstávají) nebo -> REJECTED (sedadla se uvolní); REJECTED je terminální stav              |
+
+
+## 3
+| Responsibility | Owner | State/data | Why here? |
+|---|---|---|---|
+| **Draft creation, Draft expiry, Cancellation** | `ReservationManagement` (Domain Service) | `Reservation` entity (lifecycle state, createdAt, screeningId, seatIds) | Hlavní orchestrátor životního cyklu. Spravuje základní stavové přechody a hlídá časové limity (30 min deadline, 15 min TTL). |
+| **Kontrola a zápis alokace (součást Confirmation / Cancellation)** | `SeatAvailability` (Component) | `AllocatedSeat` (evidence reálně obsazených míst pro dané promítání) | Zcela izoluje kritickou logiku BR-02 (Exclusive Resource Invariant). Zabraňuje tomu, aby kontrolu sedadel musel dělat samotný management rezervací. |
+| **Admin validation (Schválení / Zamítnutí)** | `ApprovalWorkflow` (Policy / Component) | `Reservation` (úprava stavu na CONFIRMED nebo REJECTED) | Striktně odděluje admin logiku (REQ-05) od běžného klientského procesu. Běžný uživatel k této třídě nemá přístup. |
+| **Zápis a čtení stavu** | `ReservationRepository` (Repository) | Perzistentní data v H2 databázi | Standardní vrstva pro přístup k datům (JPA), odděluje byznys logiku od databázových operací. |
