@@ -1,4 +1,5 @@
-Selected architecture unit / responsibility: Reservation lifecycle
+# Detailed Design
+## Selected architecture unit / responsibility: Reservation lifecycle
 
 Related requirement(s): 
 - REQ-01 system vytvori DRAFT normalni rezervace ro existujici sedadla, kdyz pozadovany interval sedadel je volny
@@ -12,3 +13,10 @@ Relevant business rule(s):
 - BR-03 — Cancellation policy [team-defined, domain-specific accepted policy]
 - BR-04 — Domain-specific rule from C01 [team-defined] Zruseni rezervace je mozne do 30 minut pred promitanim
 - BR-05 — Only future change Uzivatel muze vytvorit/upravit/zrusit rezervaci pouze na budouci promitani
+
+## SubResponsibilities
+- DRAFT CREATION
+- DRAFT EXPIRE
+- CONFIRMATION
+- CANCELATION
+- ADMIN VALIDATION
