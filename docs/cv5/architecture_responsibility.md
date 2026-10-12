@@ -37,21 +37,45 @@ Relevant business rule(s):
 
 ### Key interface(s) / contract(s)
 
-`<<interface>> SeatAvailability`
+`<<interface>> ReservationRepository`
 
-`allocateSeats(screeningId, seatIds, reservationId) : AllocationResult`
+`findByStatusAndExpiresAtBefore(status: ReservationStatus, time: LocalDateTime) : List<Reservation>`
 
 **Contract:**
 
 **Preconditions:**
-- `screeningId` a `seatIds` jsou platné a nejsou prázdné.
-- Promítání se odehrává v budoucnosti (odvozeno z BR-05).
-- Rezervace je aktuálně ve stavu DRAFT.
+- `status` je platný stav rezervace (např. ReservationStatus.DRAFT).
+- `time` je platné časové razítko (aktuální čas systému).
 
 **Postcondition:**
-- `AllocationResult` obsahuje potvrzení o úspěchu.
-- Všechna požadovaná sedadla z `seatIds` jsou exkluzivně a trvale zapsána pro dané `screeningId` a `reservationId`. Žádný jiný proces je nemůže alokovat.
+- Vrací seznam všech rezervací v daném stavu, jejichž čas `expiresAt` je starší než zadaný čas `time`.
+- Nemění stav databáze (read-only vyhledávací operace).
 
 **Failures:**
-- `SEAT_ALREADY_TAKEN` (Porušení BR-02: o alokaci se ve stejný čas pokusil někdo jiný a byl rychlejší).
-- `INVALID_INPUT` (Sedadlo v daném sále vůbec neexistuje).
+- `DATABASE_UNAVAILABLE` (výpadek spojení s databází – transakce se neprovede a vyvolá se výjimka).
+- `INVALID_ARGUMENT` (pokus o předání null hodnoty do parametrů).
+
+
+## 5 — Odvoďte unit/component testy z DD
+
+### Přehled odvozených testů
+
+| DD element / decision | What must hold? | Test level | Test case |
+|---|---|---|---|
+| Interface contract (`SeatAvailability`) | Úspěšně alokuje sedadla pro platný screening, neprázdný seznam a DRAFT rezervaci | unit / component | `testAllocateSeatsSuccess()` |
+| Algorithm branch (BR-02 / conflict) | Vyhodí chybu `SEAT_ALREADY_TAKEN`, pokud se o alokaci pokusil jiný proces dříve | component / unit | `testAllocateSeatsAlreadyTakenThrowsException()` |
+| Precondition / validation | Vyhodí `INVALID_INPUT`, pokud požadované sedadlo v daném sále neexistuje | unit | `testAllocateSeatsInvalidSeatThrowsException()` |
+| Future screening check (BR-05) | Odmítne alokaci pro promítání, které se neodehrává v budoucnosti | unit | `testAllocateSeatsPastScreeningFails()` |
+| Collaboration (`ReservationService` + `SeatAvailability`) | Zajistí transakční alokaci sedadel a propojení s konkrétní rezervací | integration | `testServiceAllocatesSeatsAndPersists()` |
+
+### Detailní zdůvodnění vybraných testů
+
+#### 1. Test pro Algorithm branch (`SEAT_ALREADY_TAKEN` / BR-02)
+* **Selected level:** Component / Unit test
+* **Why this level:** Pravidlo zamezení duplicitní alokace stejného sedadla pro stejný screening je klíčovým invariantem rezervačního systému[cite: 1, 2, 3]. Test ověřuje, že při souběžném pokusu o alokaci systém správně zachytí konflikt, zabrání dvojité rezervaci a vrátí očekávaný chybový stav.
+* **What design decision does this test verify?** Ověřuje dodržení kontraktu rozhraní `SeatAvailability` a odolnost vůči race conditions (konfliktním zápisům) na úrovni alokace sedadel.
+
+#### 2. Test pro Precondition / Invalid Input (`INVALID_INPUT`)
+* **Selected level:** Unit test
+* **Why this level:** Ověření vstupních podmínek (preconditions) zajišťuje, že systém selže včas a bezpečně předtím, než se pokusí pracovat s neexistujícími daty v databázi[cite: 3]. Unit test isolovaně prověří reakci na neplatná ID sedadel.
+* **What design decision does this test verify?** Ověřuje splnění předpokladů rozhraní `SeatAvailability` a správné ošetření neplatných vstupních parametrů.
