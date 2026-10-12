@@ -37,24 +37,23 @@ Relevant business rule(s):
 
 ### Key interface(s) / contract(s)
 
-`<<interface>> SeatAvailability`
+`<<interface>> ReservationRepository`
 
-`allocateSeats(screeningId, seatIds, reservationId) : AllocationResult`
+`findByStatusAndExpiresAtBefore(status: ReservationStatus, time: LocalDateTime) : List<Reservation>`
 
 **Contract:**
 
 **Preconditions:**
-- `screeningId` a `seatIds` jsou platné a nejsou prázdné.
-- Promítání se odehrává v budoucnosti (odvozeno z BR-05).
-- Rezervace je aktuálně ve stavu DRAFT.
+- `status` je platný stav rezervace (např. ReservationStatus.DRAFT).
+- `time` je platné časové razítko (aktuální čas systému).
 
 **Postcondition:**
-- `AllocationResult` obsahuje potvrzení o úspěchu.
-- Všechna požadovaná sedadla z `seatIds` jsou exkluzivně a trvale zapsána pro dané `screeningId` a `reservationId`. Žádný jiný proces je nemůže alokovat.
+- Vrací seznam všech rezervací v daném stavu, jejichž čas `expiresAt` je starší než zadaný čas `time`.
+- Nemění stav databáze (read-only vyhledávací operace).
 
 **Failures:**
-- `SEAT_ALREADY_TAKEN` (Porušení BR-02: o alokaci se ve stejný čas pokusil někdo jiný a byl rychlejší).
-- `INVALID_INPUT` (Sedadlo v daném sále vůbec neexistuje).
+- `DATABASE_UNAVAILABLE` (výpadek spojení s databází – transakce se neprovede a vyvolá se výjimka).
+- `INVALID_ARGUMENT` (pokus o předání null hodnoty do parametrů).
 
 
 ## 5 — Odvoďte unit/component testy z DD
