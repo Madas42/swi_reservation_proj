@@ -5,6 +5,7 @@ Related requirement(s):
 - REQ-02: Pro existující promítání systém vrátí seznam všech sedadel v sále s jejich aktuálním stavem
 - REQ-03: Systém změní stav rezervace z DRAFT na CONFIRMED a trvale zapiše alokaci sedadel pro dané promítání.
 - REQ-04 Systém umožní zrušit rezervaci ve stavu DRAFT nebo CONFIRMED, a to nejdéle 30 minut před začátkem promítání. Po zrušení rezervace přestane blokovat dostupné zdroje (sedadel).
+- REQ-05 — Approve / Reject Reservation (Admin Approval)
   
 Related scenario(s): vytvareni rezervace, kontrola podminek, potvrzeni rezervace (adminem)
 
