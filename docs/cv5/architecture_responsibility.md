@@ -24,10 +24,12 @@ Relevant business rule(s):
 | Admin validation — schválení/zamítnutí PENDING_APPROVAL (> 10 míst), uvolnění sedadel při rejectu                                           | Řízeno změnovou kartou C02 (REQ-05); PENDING_APPROVAL -> CONFIRMED (sedadla zůstávají) nebo -> REJECTED (sedadla se uvolní); REJECTED je terminální stav              |
 
 
-## 3
+## 3 Design elements and ownership (Struktura a data)
+
 | Responsibility | Owner | State/data | Why here? |
 |---|---|---|---|
-| **Draft creation, Draft expiry, Cancellation** | `ReservationManagement` (Domain Service) | `Reservation` entity (lifecycle state, createdAt, screeningId, seatIds) | Hlavní orchestrátor životního cyklu. Spravuje základní stavové přechody a hlídá časové limity (30 min deadline, 15 min TTL). |
-| **Kontrola a zápis alokace (součást Confirmation / Cancellation)** | `SeatAvailability` (Component) | `AllocatedSeat` (evidence reálně obsazených míst pro dané promítání) | Zcela izoluje kritickou logiku BR-02 (Exclusive Resource Invariant). Zabraňuje tomu, aby kontrolu sedadel musel dělat samotný management rezervací. |
-| **Admin validation (Schválení / Zamítnutí)** | `ApprovalWorkflow` (Policy / Component) | `Reservation` (úprava stavu na CONFIRMED nebo REJECTED) | Striktně odděluje admin logiku (REQ-05) od běžného klientského procesu. Běžný uživatel k této třídě nemá přístup. |
-| **Zápis a čtení stavu** | `ReservationRepository` (Repository) | Perzistentní data v H2 databázi | Standardní vrstva pro přístup k datům (JPA), odděluje byznys logiku od databázových operací. |
+| **Draft creation** | `ReservationManagement` | `Reservation` (stav DRAFT, TTL, screeningId) | Hlavní orchestrátor životního cyklu. Zaznamená uživatelův záměr a odděluje výběr od trvalé alokace. |
+| **Draft expiry** | `ReservationManagement` (příp. `ExpirationManager`) | `Reservation` (přechod na EXPIRED) | Hlídá časové limity (15 min TTL), aby nevyužité záměry neblokovaly sedadla donekonečna. |
+| **Confirmation** | `ReservationManagement` a `SeatAvailability` | `Reservation` (CONFIRMED / PENDING), `AllocatedSeat` | `ReservationManagement` řídí proces a změnu stavu. `SeatAvailability` je zavolána k trvalému zápisu alokace a garantuje BR-02 (zabraňuje overbookingu). |
+| **Cancellation** | `ReservationManagement` a `SeatAvailability` | `Reservation` (stav CANCELLED) | `ReservationManagement` hlídá 30minutový deadline a idempotenci. Pokud je storno úspěšné, zavolá `SeatAvailability` pro uvolnění sedadel. |
+| **Admin validation** | `ApprovalWorkflow` | `Reservation` (přechod z PENDING na CONFIRMED / REJECTED) | Striktně odděluje admin schvalování (REQ-05) od běžného toku. Při REJECTED se postará o uvolnění sedadel. |
