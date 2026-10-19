@@ -172,3 +172,29 @@ public interface SeatAvailability {
 | `SeatAvailability::allocateSeats` | Ověření dostupnosti a exkluzivní blokace sedadel | `screeningId`, `seatIds`, `reservationId` | `AllocationResult` / `SEAT_ALREADY_TAKEN` |
 | `Reservation::confirm` | Přechod stavu rezervace z `DRAFT` na `CONFIRMED` | — (interní stav entity) | `void` / `IllegalStateException` |
 | `ReservationService::confirm` | Orchestrace celého procesu potvrzení rezervace | `reservation2Id` (Long) | `Reservation` / výjimka |
+
+**Algorithm / decision logic:**
+
+Následující algoritmus zajišťuje ověření dostupnosti sedadel, zamezení souběžných konfliktů (vynucení pravidel BR-01 a BR-02)[cite: 1, 2] a případné schválení administrátorem pro velká skupinová rezervování (více než 10 míst):
+
+```java
+public AllocationResult allocateSeats(Long screeningId, List<Long> seatIds, Long reservationId) {
+    // 1. Ověření, zda se promítání koná v budoucnosti a sedadla existují (BR-05)
+    validateScreeningAndSeats(screeningId, seatIds);
+
+    // 2. Kontrola kolizí (BR-01 / BR-02): Zjištění, zda již nejsou sedadla obsazena jinou potvrzenou rezervací
+    List<Long> blockedSeats = reservationRepository.findAlreadyReservedSeats(screeningId, seatIds);
+    if (!blockedSeats.isEmpty()) {
+        throw new SeatAlreadyTakenException("SEAT_ALREADY_TAKEN: Sedadla " + blockedSeats + " jsou již obsazena.");
+    }
+
+    // 3. Pravidlo pro velké skupiny: pokud je vybráno více než 10 míst, vyžaduje se schválení administrátorem
+    if (seatIds.size() > 10) {
+        reservationRepository.updateStatus(reservationId, ReservationStatus.REQUIRES_APPROVAL);
+        return new AllocationResult(false, "REQUIRES_APPROVAL");
+    }
+
+    // 4. Úspěšná exkluzivní alokace a trvalý zápis do databáze
+    reservationRepository.saveAllReservedSeats(screeningId, seatIds, reservationId);
+    return new AllocationResult(true, "SUCCESS");
+}
