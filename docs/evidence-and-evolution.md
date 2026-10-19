@@ -87,3 +87,30 @@ Behaviour verification:
 
 Remaining uncertainty / risk: Chování systému při vysoké zátěži a paralelním vytváření rezervací na identická místa.
 Commit/tag: v0.2-c03-part-a
+
+
+## C05 DD Verification Evidence
+Tests derived from DD:
+Unit/component tests executed:
+Design ↔ implementation mismatch:
+
+## 6 — Implementujte a ověřte design ↔ code
+
+### Porovnání plánovaného detailního návrhu (DD) a skutečné implementace
+
+| DD decision (Návrhové rozhodnutí) | Implemented? | Evidence (Důkaz / Soubor / Test) | Action (Akce) |
+|---|---|---|---|
+| **Interface Contract (`SeatAvailability`):** Vystavení rozhraní pro alokaci sedadel se specifickými preconditions a failures[cite: 3] | **YES** | `SeatAvailability.java`<br>`SeatAvailabilityTest.java` | keep |
+| **Algorithm Branch (BR-02 / Conflict):** Detekce a ošetření výjimky `SEAT_ALREADY_TAKEN` při souběžném pokusu o alokaci[cite: 1, 2, 3] | **YES** | `SeatAvailabilityImpl.java`<br>`SeatAvailabilityTest.testAllocateSeatsAlreadyTakenThrowsException()` | keep |
+| **State Validation (DRAFT & BR-05):** Ověření, že rezervace je ve stavu `DRAFT` a promítání se koná v budoucnosti[cite: 3] | **YES** | `Reservation.java`<br>`ReservationTest.java` | keep |
+| **Transaction Boundary & Persistence:** Zápis vybraných sedadel do tabulky `reserved_seat` v jedné transakci[cite: 3] | **PARTLY** | `ReservationService.java` | update code (dokončit jemné doladění DB izolace transakcí) |
+
+### Závěry a rozhodnutí z verifikace
+
+* **Shoda s návrhem:** Klíčové komponenty, jako je kontrakt `SeatAvailability`[cite: 3] a algoritmické ověřování konfliktů (BR-02)[cite: 1, 2, 3], jsou plně implementovány v souladu s detailním návrhem.
+* **Zjištěné rozdíly (Mismatches):** Logika alokace sedadel prozatím využívá aplikační vrstvu pro ověření stavu. Pro stoprocentní garanci atomicity při extrémní konkurenci bude nutné kód v perzistenční vrstvě mírně upravit (doplnit explicitní databázové zámky dle ADR-01)[cite: 1].
+* **Přijatá akce (`Action`):** Samotný detailní návrh a diagramy se zpětně nemění (zůstávají v platnosti jako cílový záměr), kód bude v následujícím kroku iterativně upraven (akce `update code`) tak, aby plně odpovídal všem definovaným kontraktům a fail-case scénářům.
+
+Resolution:
+Remaining design risk:
+Commit/tag:
