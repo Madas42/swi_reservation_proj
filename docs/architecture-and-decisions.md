@@ -156,3 +156,11 @@ public interface SeatAvailability {
 **Focused structural view:**
 
 ![img.png](cv5/focused_uml.png)
+
+**Detailed sequence:**
+- **1.** `ScreeningController` přijme POST požadavek na `/reservations/{id}/confirm`.
+- **2.** Zavolá se `ReservationService.confirm(reservationId)`.
+- **3.** `ReservationService` načte entitu `Reservation` pomocí `ReservationRepository`.
+- **4.** Provede se validace stavu a ověření budoucího promítání (BR-05) na entitě `Reservation`.
+- **5.** `ReservationService` deleguje alokaci sedadel na rozhraní `SeatAvailability.allocateSeats(screeningId, seatIds, reservationId)`.
+- **6.** Pokud jsou sedadla volná, proběhne zápis do databáze a stav rezervace se přepne na `CONFIRMED`. V případě kolize se vyhodí výjimka `SEAT_ALREADY_TAKEN`.
