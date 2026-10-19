@@ -170,5 +170,5 @@ public interface SeatAvailability {
 | Metoda / Operace | Zodpovědnost | Vstupní parametry | Návratová hodnota / Výjimka |
 | :--- | :--- | :--- | :--- |
 | `SeatAvailability::allocateSeats` | Ověření dostupnosti a exkluzivní blokace sedadel | `screeningId`, `seatIds`, `reservationId` | `AllocationResult` / `SEAT_ALREADY_TAKEN` |
-| `Reservation::confirm` | Přechod stavu rezervace z `DRAFT` na `CONFIRMED`[cite: 4] | — (interní stav entity) | `void` / `IllegalStateException` |
+| `Reservation::confirm` | Přechod stavu rezervace z `DRAFT` na `CONFIRMED` | — (interní stav entity) | `void` / `IllegalStateException` |
 | `ReservationService::confirm` | Orchestrace celého procesu potvrzení rezervace | `reservation2Id` (Long) | `Reservation` / výjimka |
