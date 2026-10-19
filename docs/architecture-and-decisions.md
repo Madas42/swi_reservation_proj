@@ -133,10 +133,10 @@ DD decisions intentionally left to code:
 
 **Key interface(s) / contract(s):**
 
-```java
 public interface SeatAvailability {
     AllocationResult allocateSeats(Long screeningId, List<Long> seatIds, Long reservationId);
 }
+
 
 **Contract:**
 
