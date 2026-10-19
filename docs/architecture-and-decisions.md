@@ -155,4 +155,4 @@ public interface SeatAvailability {
 
 **Focused structural view:**
 
-
+![img.png](focused_uml.png)
