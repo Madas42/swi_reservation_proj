@@ -93,11 +93,66 @@
 
 ## C05 Detailed Design
 Selected architecture unit:
+
 Detailed responsibilities:
+
 Design elements and ownership:
+
 Key interface(s) / contract(s):
+
 Focused structural view:
+
 Detailed sequence:
+
 Important methods / operations:
+
 Algorithm / decision logic: (if relevant)
+
 DD decisions intentionally left to code:
+
+
+## C05 Detailed Design
+
+**Selected architecture unit:** 
+`Reservation Management` (Confirm Reservation Slice & Seat Allocation)
+
+**Detailed responsibilities:**
+- **Draft Validation:** Ověření, že vstupní požadavek je platný a rezervace existuje ve stavu `DRAFT`.
+- **State Transition Control:** Řízení přechodu ze stavu `DRAFT` do `CONFIRMED`.
+- **Future Screening Check:** Ověření, že se promítání odehrává v budoucnosti (podle BR-05).
+- **Seat Availability & Conflict Enforcement:** Kontrola a zamezení překryvu sedadel (vynucení invariantu BR-01 / BR-02).
+- **Persistence Coordination:** Uložení alokovaných sedadel a změny stavu do perzistentního úložiště.
+
+**Design elements and ownership:**
+| Responsibility | Owner | State/data | Why here? |
+|---|---|---|---|
+| **Draft & State Transition** | `Reservation` (Domain Entity) | `id`, `status` (`DRAFT`, `CONFIRMED`), `screeningId` | Doménová entita výhradně vlastní svá pravidla a stavy. |
+| **Seat Allocation & Availability** | `SeatAvailability` (Service / Interface) | `reserved_seats` tabulka, časové sloty | Odděluje logiku alokace sedadel a kontrolu kolizí od kontroleru i perzistence. |
+| **Transaction & Orchestration** | `ReservationService` | Transakční hranice | Koordinuje tok od HTTP požadavku přes doménu až po zápis do DB. |
+| **Data Persistence** | `ReservationRepository` | Databázové záznamy | Poskytuje abstrakci nad databázovým uložištěm (Spring Data JPA). |
+
+**Key interface(s) / contract(s):**
+
+```java
+public interface SeatAvailability {
+    AllocationResult allocateSeats(Long screeningId, List<Long> seatIds, Long reservationId);
+}
+
+**Contract:**
+
+- **Preconditions:**
+  - `screeningId` a `seatIds` jsou platné a nejsou prázdné.
+  - Promítání se odehrává v budoucnosti (odvozeno z BR-05).
+  - Rezervace je aktuálně ve stavu `DRAFT`.
+
+- **Postcondition:**
+  - `AllocationResult` obsahuje potvrzení o úspěchu.
+  - Všechna požadovaná sedadla z `seatIds` jsou exkluzivně a trvale zapsána pro dané `screeningId` a `reservationId`. Žádný jiný proces je nemůže alokovat.
+
+- **Failures:**
+  - `SEAT_ALREADY_TAKEN` (Porušení BR-02 / BR-01: o alokaci se ve stejný čas pokusil někdo jiný a byl rychlejší).
+  - `INVALID_INPUT` (Sedadlo v daném sále vůbec neexistuje).
+
+**Focused structural view:**
+
+
