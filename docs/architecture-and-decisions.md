@@ -198,3 +198,9 @@ public AllocationResult allocateSeats(Long screeningId, List<Long> seatIds, Long
     reservationRepository.saveAllReservedSeats(screeningId, seatIds, reservationId);
     return new AllocationResult(true, "SUCCESS");
 }
+
+**DD decisions intentionally left to code:**
+- **Infrastruktura a HTTP vrstva:** Konfigurace Spring MVC anotací (`@RestController`, `@PostMapping`), mapování URL endpointů a mapování výjimek na HTTP status kódy v globálním handleru.
+- **Formátování odpovědí a serializace:** Převod doménových objektů na JSON/HTML odpovědi a struktura chybových hlášení pro klientské rozhraní.
+- **Technická správa spojení a transakční detaily:** Nastavení connection poolů pro databázi (HikariCP), definice transakčních timeoutů a technické detaily logování (`SLF4J`).
+- **Validace na úrovni API DTO:** Technické formátovací validace vstupních dat pomocí anotací Bean Validation (`@NotNull`, `@Size`), které doplňují hlavní doménová pravidla (BR-01, BR-02, BR-05).
