@@ -89,3 +89,15 @@
 ## A8. Architektonická otázka pro další návrh
 
 > **Otázka**: Jakým způsobem zajistíme konzistenci a zabráníme race condition (souběžným požadavkům na potvrzení/rezervaci stejného sedadla na stejné promítání v jeden okamžik), pokud databázová kontrola v `ReservationService` probíhá na úrovni aplikační logiky bez použití pesimistického/optimistického zamykání nebo databázových unikátních indexů?
+
+
+## C05 Detailed Design
+Selected architecture unit:
+Detailed responsibilities:
+Design elements and ownership:
+Key interface(s) / contract(s):
+Focused structural view:
+Detailed sequence:
+Important methods / operations:
+Algorithm / decision logic: (if relevant)
+DD decisions intentionally left to code:
