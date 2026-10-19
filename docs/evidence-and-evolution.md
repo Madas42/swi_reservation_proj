@@ -87,4 +87,3 @@ Behaviour verification:
 
 Remaining uncertainty / risk: Chování systému při vysoké zátěži a paralelním vytváření rezervací na identická místa.
 Commit/tag: v0.2-c03-part-a
-
