@@ -164,3 +164,11 @@ public interface SeatAvailability {
 - **4.** Provede se validace stavu a ověření budoucího promítání (BR-05) na entitě `Reservation`.
 - **5.** `ReservationService` deleguje alokaci sedadel na rozhraní `SeatAvailability.allocateSeats(screeningId, seatIds, reservationId)`.
 - **6.** Pokud jsou sedadla volná, proběhne zápis do databáze a stav rezervace se přepne na `CONFIRMED`. V případě kolize se vyhodí výjimka `SEAT_ALREADY_TAKEN`.
+
+  **Important methods / operations:**
+
+| Metoda / Operace | Zodpovědnost | Vstupní parametry | Návratová hodnota / Výjimka |
+| :--- | :--- | :--- | :--- |
+| `SeatAvailability::allocateSeats` | Ověření dostupnosti a exkluzivní blokace sedadel | `screeningId`, `seatIds`, `reservationId` | `AllocationResult` / `SEAT_ALREADY_TAKEN` |
+| `Reservation::confirm` | Přechod stavu rezervace z `DRAFT` na `CONFIRMED`[cite: 4] | — (interní stav entity) | `void` / `IllegalStateException` |
+| `ReservationService::confirm` | Orchestrace celého procesu potvrzení rezervace | `reservation2Id` (Long) | `Reservation` / výjimka |
