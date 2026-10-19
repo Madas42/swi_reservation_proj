@@ -55,6 +55,11 @@ Relevant business rule(s):
 - `DATABASE_UNAVAILABLE` (výpadek spojení s databází – transakce se neprovede a vyvolá se výjimka).
 - `INVALID_ARGUMENT` (pokus o předání null hodnoty do parametrů).
 
+
+### Focused UML structural view
+
+![img.png](focused_uml.png)
+
 ## 4 - Important operation decisions
 ### OP-01 — Create Reservation
 
