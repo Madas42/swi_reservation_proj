@@ -52,7 +52,7 @@ Notifikace uživateli o výsledku schválení/zamítnutí jeho rezervace.
 Commit / tag aplikace:
 TBD — v dokumentaci neuvedeno (doplnit hash commitu / tag z repozitáře).
 
-## C03 — Architecture Evidence
+## C03-C04 — Architecture Evidence
 
 Baseline: v0.2
 Part A:
@@ -87,3 +87,4 @@ Behaviour verification:
 
 Remaining uncertainty / risk: Chování systému při vysoké zátěži a paralelním vytváření rezervací na identická místa.
 Commit/tag: v0.2-c03-part-a
+
