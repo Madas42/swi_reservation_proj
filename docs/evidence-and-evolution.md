@@ -87,3 +87,32 @@ Behaviour verification:
 
 Remaining uncertainty / risk: Chování systému při vysoké zátěži a paralelním vytváření rezervací na identická místa.
 Commit/tag: v0.2-c03-part-a
+
+## C05 DD Verification Evidence ----- TODO rest of points
+Tests derived from DD:
+Unit/component tests executed:
+Design ↔ implementation mismatch:
+| DD decision | Implemented? | Evidence (file/test) | Action |
+|---|---|---|---|
+| Draft creation vlastněná `ReservationManagement`: validace vstupů, DRAFT s TTL 15 min, requestedSeatIds bez alokace (OP-01) | YES | `ReservationManagement.createDraft` (`DRAFT_TTL_MINUTES`); `LifecycleTest.createDraftCreatesUnallocatedDraftReservation` | keep |
+| Duplicitní aktivní rezervace téhož zákazníka na promítání odmítnuta (OP-01 precondition) | YES | `createDraft` (check `findByCustomer_EmailAndScreening_Id`); `LifecycleTest.createDraftRejectsSecondActiveReservationForSameCustomerAndScreening` | keep |
+| Draft expiry: lazy při confirm/render + eager background job každých 60 s, DRAFT -> EXPIRED (pseudokód) | YES | `ReservationManagement.expireStaleDrafts`, `ExpirationManager` (`@Scheduled(fixedDelay = 60_000)`), lazy v `confirm` (`isDraftExpired`); `LifecycleTest.backgroundJobExpiresStaleDraft`, `confirmExpiredDraftMarksReservationExpired` | keep |
+| Confirmation: DRAFT -> CONFIRMED (<= 10 míst) nebo PENDING_APPROVAL (> 10 míst, C02), alokace zapsána v obou případech (OP-03) | YES | `ReservationManagement.confirm` (`LARGE_RESERVATION_SEATS`); `LifecycleTest.confirmLargeDraftRequiresAdminApproval`, `confirmAllocatesSeatsAndConfirmsReservation` | keep |
+| BR-02 `allocateIfAvailable`: check + zápis v jedné transakci, DB unikátní omezení (screening_id, seat_id) jako zábrana souběhu | YES | `SeatAvailability.allocateIfAvailable` (`Propagation.MANDATORY`), `ReservedSeat` unique constraint; `LifecycleTest.confirmRejectsSeatTakenByAnotherConfirmedReservation`, `pendingApprovalSeatsBlockOtherReservations` | keep |
+| BR-02 pseudokód hlásí konflikt výjimkou `throw "seats already taken"` | PARTLY | kód vrací `boolean false`, `confirm` z toho udělá `Outcome` s uživatelskou zprávou (stejná sémantika, jiný mechanismus) — `SeatAvailability.allocateIfAvailable`, `ReservationManagement.confirm` | update DD (pseudokód: návratová hodnota místo výjimky) |
+| BR-05: only future — kontrola na create, confirm i cancel | YES | `createDraft`/`confirm`/`cancel` (`startTime.isAfter(now)`); `LifecycleTest.createDraftRejectsPastScreening`, `confirm` "This screening has already started." | keep |
+| Cancellation: BR-03 idempotentní opakované zrušení, BR-04 deadline 30 min před promítáním, mazání reserved_seat, uvolnění sedadel (OP-04) | YES | `ReservationManagement.cancel` (`CANCEL_DEADLINE_MINUTES`), `SeatAvailability.release`; `LifecycleTest.cancelIsIdempotentForAlreadyCancelledReservation`, `cancelRejectedWhenLessThanThirtyMinutesRemain`, `cancelConfirmedReservationFreesSeats`, `cancelledSeatCanBeRebookedByAnotherCustomer` | keep |
+| Idempotentní re-cancel v DD jen vrací OK; kód navíc volá `release` (releases rows of the already-cancelled reservation) | PARTLY | `ReservationManagement.cancel` — větev `CANCELLED` volá `seatAvailability.release` (defenzivně, vzhledem k bugu s unique constraintem v `evidence-and-evolution.md`) | update DD (doplnit release i v idempotentní větvi) |
+| Admin validation: `ApprovalWorkflow` vlastní PENDING_APPROVAL -> CONFIRMED (sedadla zůstávají) / REJECTED (terminální, sedadla se uvolní) (OP-05) | YES | `ApprovalWorkflow.approve/reject`; `LifecycleTest.approvePendingReservationConfirmsIt`, `rejectPendingReservationReleasesSeats`, `approveAndRejectOnlyWorkOnPendingApproval` | keep |
+| OP-05 side effect: výsledek přes `NotificationIntegration`, 3 pokusy, selhání nikdy nevrací rozhodnutí | YES | `NotificationIntegration` (`MAX_SEND_ATTEMPTS = 3`, catch pouze loguje); `LifecycleTest.approveSurvivesNotificationServiceFailure` | keep |
+| OP-05 precondition: nepřihlášený admin -> přesměrování na domovskou stránku, operace se neprovede | YES | `AdminController.isLoggedIn` + `redirect:/` v `approve`/`reject` a `adminPanel` | keep |
+| OP-05 souběh (cancel mezitím / dvě rozhodnutí): první operace proběhne, druhá je odmítnuta | PARTLY | hájí se jen kontrolou stavu uvnitř `@Transactional` (`ApprovalWorkflow`, `ReservationManagement.cancel`); u approve/approve souběhu chybí DB-level zábrana (na rozdíl od BR-02), dvojité schválení je ale konvergentní (CONFIRMED -> CONFIRMED) | update DD (zdokumentovat spoléhání na status check + konvergentní výsledek) |
+| Kontrakt `ReservationRepository.findByStatusAndExpiresAtBefore(status, time)`: read-only, vrací prošlé DRAFTy | YES | `ReservationRepository.java:15`; použito v `ReservationManagement.expireStaleDrafts`; `LifecycleTest.backgroundJobExpiresStaleDraft` | keep |
+| Kontrakt repository — failures `DATABASE_UNAVAILABLE` / `INVALID_ARGUMENT` | PARTLY | `DATABASE_UNAVAILABLE` pokrývá Spring Data/JPA (propagace výjimky, rollback transakce); `INVALID_ARGUMENT` (null) není explicitně ošetřeno, spoléhá se na framework | update DD (vymezit, že null-check zajišťuje Spring Data) |
+| Ownership tabulka: `ReservationManagement` = lifecycle, `SeatAvailability` = alokační stav, `ApprovalWorkflow` = schvalování | YES | javadoc + struktura všech tří tříd; `SeatAvailability.checkAvailability` (OP-02), `heldSeatCount`, `allocationOf`, `release` | keep |
+| Detailed sequence `ScreeningController -> ReservationManagement -> SeatAvailability -> ReservationRepository` | YES | `ScreeningController.java` (view volá jen `reservationManagement` a `seatAvailability`) | keep |
+| Sekce 5 — odvozené testy `testAllocateSeatsSuccess()`, `testAllocateSeatsAlreadyTakenThrowsException()`, `testAllocateSeatsInvalidSeatThrowsException()`, `testAllocateSeatsPastScreeningFails()` jako unit testy `SeatAvailability` | PARTLY | ekvivalentní chování pokryto component/integration testy s jinými názvy: `confirmAllocatesSeatsAndConfirmsReservation`, `confirmRejectsSeatTakenByAnotherConfirmedReservation`, `createDraftRejectsPastScreening`, `createDraftCreatesUnallocatedDraftReservation` (`LifecycleTest`); izolované unit testy `SeatAvailability` neexistují | update DD (přejmenovat testy na skutečné, přenést úroveň na component/integration) |
+
+Resolution:
+Remaining design risk:
+Commit/tag:
