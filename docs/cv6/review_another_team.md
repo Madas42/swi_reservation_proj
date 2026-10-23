@@ -54,14 +54,14 @@ Vybrané ADR/decision: Authoritative Resource Allocation under Concurrent Confir
 
 ## C04 — Quality & Measurement
 
-Quality concern:  
-Criterion:
+Quality concern: Konkurenční integrita dat a atomická alokace (Atomic exclusive multi-seat allocation)
+Criterion: Systém garantuje, že při paralelních požadavcích na potvrzení (Confirm) pro stejné sedadlo (Resource) získá stav CONFIRMED nejvýše jedna rezervace (ochrana BR-02) a ostatní obdrží chybu 409 Conflict.
 
 | ID | Odpověď | Evidence / komentář |
-|---|---|---|
-| Q1 Criterion je skutečně evaluable | | |
-| Q2 Measurement měří criterion ve správném contextu | | |
-| Q3 Decision odpovídá výsledku měření | | |
+| :--- | :--- | :--- |
+| Q1 Criterion je skutečně evaluable | Splněno | Kritérium je jednoznačně ověřitelné testem souběžných HTTP požadavků s očekávaným návratovým kódem 409. |
+| Q2 Measurement měří criterion ve správném contextu | Splněno | Měření probíhá v kontextu transakčního zpracování endpointu `/confirm` při reálném kolidujícím vstupu. |
+| Q3 Decision odpovídá výsledku měření | Splněno | Architektonické rozhodnutí vynucuje serializaci/zámky na úrovni databáze/transakce, což odpovídá zjištěnému chování. |
 
 ## C05 — Detailed Design & Unit Verification
 
