@@ -25,16 +25,17 @@ Každý řádek musí obsahovat Evidence.
 
 ## C02 — Engineering Specification
 
-Vybraná operace:  
-Vybraný business rule / invariant:
+Vybraná operace: OP-03- Confirm Reservation
+Vybraný business rule / invariant: BR-02-Exclusive Resource Invariant (No Double Booking)
 
 | ID | Odpověď | Evidence / komentář |
-|---|---|---|
-| R1 Operation: input + precondition + postcondition/state | | |
-| R2 Business rule/invariant je jednoznačný | | |
-| R3 Operation/rule je konzistentní se state modelem | | |
-| R4 Implementace odpovídá specifikované semantics | | |
-| R5 Existuje vhodná verification evidence | | |
+| :--- | :--- | :--- |
+| R1 Operation: input + precondition + postcondition/state | Splněno | Operace `Confirm Reservation` přijímá `reservationId`, vyžaduje, aby rezervace existovala, byla ve stavu `DRAFT`, uživatel byl jejím vlastníkem a projekce ještě nezačala (`currentTime < screening.startTime`). Po úspěšném provedení přechází stav na `CONFIRMED`. |
+| R2 Business rule/invariant je jednoznačný | Splněno | Pravidlo `BR-02` jasně stanoví, že pro stejný zdroj `(Screening, Seat)` může existovat maximálně jedna rezervace ve stavu `CONFIRMED`. |
+| R3 Operation/rule je konzistentní se state modelem | Splněno | Přechod `DRAFT -> CONFIRMED` přesně odpovídá stavovému modelu z dokumentace. |
+| R4 Implementace odpovídá specifikované semantics | Splněno | Logika endpointu `POST /reservations/{id}/confirm` kontroluje kolize sedadel a vrací kód `409 Conflict` v případě duplicitní rezervace nebo začaté projekce. |
+| R5 Existuje vhodná verification evidence | Splněno | V dokumentaci a testovacích scénářích jsou uvedeny konkrétní příklady (např. 200 OK při volných sedadlech, 409 Conflict při pokusu o potvrzení obsazeného sedadla). |
+
 
 ## C03 — Architecture
 
