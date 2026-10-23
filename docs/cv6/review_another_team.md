@@ -39,7 +39,7 @@ Vybraný business rule / invariant: BR-02-Exclusive Resource Invariant (No Doubl
 
 ## C03 — Architecture
 
-Vybraná responsibility: Evaluate allocation conflicts and preserve exclusive allocation
+Vybraná responsibility: Manage pending expiration
 
 Vybraná interaction: Atomic allocation attempt (DB enforces BR-02) při operaci Confirm Reservation.
 
@@ -47,10 +47,10 @@ Vybrané ADR/decision: Authoritative Resource Allocation under Concurrent Confir
 
 | ID | Odpověď | Evidence / komentář |
 |---|---|---|
-| A1 Responsibility + owner jsou explicitní | | |
-| A2 Skutečný code ownership odpovídá architektuře | | |
-| A3 Dynamic interaction odpovídá skutečnému call path | | |
-| A4 ADR/decision odpovídá současné implementaci | | |
+| A1 Responsibility + owner jsou explicitní | YES | `C03.md` sekce C2 a G2 jasně definuje responsibility Manage pending expiration a jejího vlastníka Reservation Management |
+| A2 Skutečný code ownership odpovídá architektuře | YES | Rozdělení v kódu přesně kopíruje návrh. Třída ExpirationSweep.java funguje jen jako časovač (Trigger) a ExpirationService.java řeší logiku |
+| A3 Dynamic interaction odpovídá skutečnému call path | NO | Dynamická interakce v sekvenčním diagramu H1 počítá s tím, že databáze zamítne konflikt při alokaci (vynucení na úrovni DB). Skutečný call path v kódu (ReservationService) ale databázový zámek nem8 a kolize kontroluje pouze aplikačním dotazem (countOtherAllocations) |
+| A4 ADR/decision odpovídá současné implementaci | PARTLY | Podle `ADR-01` má exkluzivitu sedadel hlídat přímo databáze. Kód v ReservationService se tím ale zatím neřídí a řeší kolize jen na aplikační vrstvě. Tým se o teto chybějící implementaci zmiňuje v gap analýze (bod J-01). |
 
 ## C04 — Quality & Measurement
 
