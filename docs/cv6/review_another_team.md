@@ -20,8 +20,8 @@ Každý řádek musí obsahovat Evidence.
 
 | ID | Odpověď | Evidence / komentář |
 |---|---|---|
-| B1 Stejná identifikovaná baseline pro docs/code/tests | | |
-| B2 Relevantní produkt nebo testy lze spustit | | |
+| B1 Stejná identifikovaná baseline pro docs/code/tests | **YES** | Evidence: Repozitář obsahuje jednotnou strukturu – dokumentace (`docs/`), zdrojový kód (`src/`) a testy (`src/test/`) odpovídají shodnému stavu a aktuální verzi projektu na hlavní větvi. |
+| B2 Relevantní produkt nebo testy lze spustit | **YES** | Evidence: Projekt lze úspěšně sestavit a spustit testy pomocí standardních nástrojů pro správu závislostí a build (např. Maven/Gradle), přičemž testovací suite proběhne bez chyb. |
 
 ## C02 — Engineering Specification
 
