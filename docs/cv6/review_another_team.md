@@ -4,9 +4,9 @@
 
 ```text
 Hodnotící tým: Absolute Cinema
-Hodnocený tým:Cinema
-Projekt: Cinema
-Assessed commit/tag:
+Hodnocený tým: Team Deadlock
+Projekt: Cinema Reservation System
+Assessed commit/tag: 07e5018 (main)
 Datum: 23.10.2026
 ```
 
@@ -25,16 +25,16 @@ Každý řádek musí obsahovat Evidence.
 
 ## C02 — Engineering Specification
 
-Vybraná operace: OP-03- Confirm Reservation
-Vybraný business rule / invariant: BR-02-Exclusive Resource Invariant (No Double Booking)
+Vybraná operace: OP-03 — Confirm Reservation  
+Vybraný business rule / invariant: BR-02 — Exclusive Resource Invariant (No Double Booking)
 
 | ID | Odpověď | Evidence / komentář |
 | :--- | :--- | :--- |
-| R1 Operation: input + precondition + postcondition/state | Splněno | Operace `Confirm Reservation` přijímá `reservationId`, vyžaduje, aby rezervace existovala, byla ve stavu `DRAFT`, uživatel byl jejím vlastníkem a projekce ještě nezačala (`currentTime < screening.startTime`). Po úspěšném provedení přechází stav na `CONFIRMED`. |
-| R2 Business rule/invariant je jednoznačný | Splněno | Pravidlo `BR-02` jasně stanoví, že pro stejný zdroj `(Screening, Seat)` může existovat maximálně jedna rezervace ve stavu `CONFIRMED`. |
-| R3 Operation/rule je konzistentní se state modelem | Splněno | Přechod `DRAFT -> CONFIRMED` přesně odpovídá stavovému modelu z dokumentace. |
-| R4 Implementace odpovídá specifikované semantics | Splněno | Logika endpointu `POST /reservations/{id}/confirm` kontroluje kolize sedadel a vrací kód `409 Conflict` v případě duplicitní rezervace nebo začaté projekce. |
-| R5 Existuje vhodná verification evidence | Splněno | V dokumentaci a testovacích scénářích jsou uvedeny konkrétní příklady (např. 200 OK při volných sedadlech, 409 Conflict při pokusu o potvrzení obsazeného sedadla). |
+| R1 Operation: input + precondition + postcondition/state | YES | Operace `Confirm Reservation` přijímá `reservationId`, vyžaduje, aby rezervace existovala, byla ve stavu `DRAFT`, uživatel byl jejím vlastníkem a projekce ještě nezačala (`currentTime < screening.startTime`). Po úspěšném provedení přechází stav na `CONFIRMED`. |
+| R2 Business rule/invariant je jednoznačný | YES | Pravidlo `BR-02` jasně stanoví, že pro stejný zdroj `(Screening, Seat)` může existovat maximálně jedna rezervace ve stavu `CONFIRMED`. |
+| R3 Operation/rule je konzistentní se state modelem | YES | Přechod `DRAFT -> CONFIRMED` přesně odpovídá stavovému modelu z dokumentace. |
+| R4 Implementace odpovídá specifikované semantics | YES | Logika endpointu `POST /reservations/{id}/confirm` kontroluje kolize sedadel a vrací kód `409 Conflict` v případě duplicitní rezervace nebo začaté projekce. |
+| R5 Existuje vhodná verification evidence | YES | V dokumentaci a testovacích scénářích jsou uvedeny konkrétní příklady (např. 200 OK při volných sedadlech, 409 Conflict při pokusu o potvrzení obsazeného sedadla). |
 
 
 ## C03 — Architecture
@@ -49,8 +49,8 @@ Vybrané ADR/decision: Authoritative Resource Allocation under Concurrent Confir
 |---|---|---|
 | A1 Responsibility + owner jsou explicitní | YES | `C03.md` sekce C2 a G2 jasně definuje responsibility Manage pending expiration a jejího vlastníka Reservation Management |
 | A2 Skutečný code ownership odpovídá architektuře | YES | Rozdělení v kódu přesně kopíruje návrh. Třída ExpirationSweep.java funguje jen jako časovač (Trigger) a ExpirationService.java řeší logiku |
-| A3 Dynamic interaction odpovídá skutečnému call path | NO | Dynamická interakce v sekvenčním diagramu H1 počítá s tím, že databáze zamítne konflikt při alokaci (vynucení na úrovni DB). Skutečný call path v kódu (ReservationService) ale databázový zámek nem8 a kolize kontroluje pouze aplikačním dotazem (countOtherAllocations) |
-| A4 ADR/decision odpovídá současné implementaci | PARTLY | Podle `ADR-01` má exkluzivitu sedadel hlídat přímo databáze. Kód v ReservationService se tím ale zatím neřídí a řeší kolize jen na aplikační vrstvě. Tým se o teto chybějící implementaci zmiňuje v gap analýze (bod J-01). |
+| A3 Dynamic interaction odpovídá skutečnému call path | NO | Dynamická interakce v sekvenčním diagramu H1 počítá s tím, že databáze zamítne konflikt při alokaci (vynucení na úrovni DB). Skutečný call path v kódu (ReservationService) ale databázový zámek nemá a kolize kontroluje pouze aplikačním dotazem (countOtherAllocations) |
+| A4 ADR/decision odpovídá současné implementaci | PARTLY | Podle `ADR-01` má exkluzivitu sedadel hlídat přímo databáze. Kód v ReservationService se tím ale zatím neřídí a řeší kolize jen na aplikační vrstvě. Tým se o tuto chybějící implementaci zmiňuje v gap analýze (bod J-01). |
 
 ## C04 — Quality & Measurement
 
@@ -59,9 +59,9 @@ Criterion: Systém garantuje, že při paralelních požadavcích na potvrzení 
 
 | ID | Odpověď | Evidence / komentář |
 | :--- | :--- | :--- |
-| Q1 Criterion je skutečně evaluable | Splněno | Kritérium je jednoznačně ověřitelné testem souběžných HTTP požadavků s očekávaným návratovým kódem 409. |
-| Q2 Measurement měří criterion ve správném contextu | Splněno | Měření probíhá v kontextu transakčního zpracování endpointu `/confirm` při reálném kolidujícím vstupu. |
-| Q3 Decision odpovídá výsledku měření | Splněno | Architektonické rozhodnutí vynucuje serializaci/zámky na úrovni databáze/transakce, což odpovídá zjištěnému chování. |
+| Q1 Criterion je skutečně evaluable | YES | Kritérium je jednoznačně ověřitelné testem souběžných HTTP požadavků s očekávaným návratovým kódem 409. |
+| Q2 Measurement měří criterion ve správném contextu | YES | Měření probíhá v kontextu transakčního zpracování endpointu `/confirm` při reálném kolidujícím vstupu. |
+| Q3 Decision odpovídá výsledku měření | PARTLY | Měření potvrzuje ochranu BR-02 (409 při kolizi), ale v kódu je zajištěná aplikačním pre-checkem pod screening zámkem, nikoli vynucením na úrovni databáze, jak požaduje ADR-01 (viz F1). |
 
 ## C05 — Detailed Design & Unit Verification
 
@@ -104,7 +104,7 @@ Reservation.java:24 potvrzuje jen tento constraint, žádnou DB kontrolu
 aktivních alokací.
 
 Verification performed:
-inspect concrete code path — controla Reservation.java (jedinečné
+inspect concrete code path — kontrola Reservation.java (unikátní
 omezení), ReservationService.confirm() (countOtherAllocations pod
 screening zámkem) a srovnání s textem ADR-01/J-01; nezávisle potvrzeno
 v hodnoceném commitu.
