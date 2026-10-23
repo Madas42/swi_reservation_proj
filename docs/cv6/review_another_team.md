@@ -181,6 +181,6 @@ evidence; kód vyhovuje, navrhuji zpřesnit tvrzení v tabulce
 
 | Finding | ACCEPTED / REJECTED / DEFERRED | Reason/evidence | Action / no-change |
 |---|---|---|---|
-| F1 | | | |
-| F2 | | | |
-| F3 | | | |
+| F1 | PENDING | Rozpor ADR-01 ↔ kód; tým si ho sám eviduje v J-01 jako CHANGE. | No-change nyní — oprava už je naplánovaná v J-01; jen v ADR-01 poznamenat, že DB vynucení zatím není implementované. |
+| F2 | PENDING | Deklarovaný tag neexistuje. | Opravit sekci Commit/tag v evidenci na skutečné commity (`8c61c98`–`a061558`), případně tag doplnit. |
+| F3 | PENDING | Evidence tvrdí víc, než test dokazuje. | Zkrátit tvrzení v tabulce na „pořadí volání a due/live rozlišení“; kód je v pořádku, neměnit. |
