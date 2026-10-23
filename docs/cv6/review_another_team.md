@@ -80,13 +80,13 @@ Vybraná software unit:
 ### F1
 
 ```text
-Source:
-Engineering claim:
-Expected:
-Observed:
-Evidence:
-Verification performed:
-Result: VERIFIED FINDING / REJECTED CANDIDATE
+Source: C03
+Engineering claim: Systém podle ADR-01 používá k zabránění dvojí rezervace stejného sedadla autoritativní kontrolu přímo na úrovni databáze.
+Expected: Podle ADR-01 a diagramu H1 má databáze exkluzivitu sedadel vynucovat (např. přes unique constraint) a při kolizi zápis zamítnout.
+Observed: Kód tuto databázovou kontrolu neimplementuje. Místo toho spoléhá na aplikační pre-check (metoda countOtherAllocations() v ReservationService).
+Evidence: Zdrojový kód ReservationService.java, C03 (položka J-01).
+Verification performed: inspect concrete code path
+Result: VERIFIED FINDING
 ```
 
 ### F2
