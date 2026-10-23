@@ -39,8 +39,10 @@ Vybraný business rule / invariant:
 ## C03 — Architecture
 
 Vybraná responsibility: Evaluate allocation conflicts and preserve exclusive allocation
+
 Vybraná interaction: Atomic allocation attempt (DB enforces BR-02) při operaci Confirm Reservation.
-Vybrané ADR/decision:
+
+Vybrané ADR/decision: Authoritative Resource Allocation under Concurrent Confirmation
 
 | ID | Odpověď | Evidence / komentář |
 |---|---|---|
