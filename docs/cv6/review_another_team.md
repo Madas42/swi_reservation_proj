@@ -65,27 +65,50 @@ Criterion: Systém garantuje, že při paralelních požadavcích na potvrzení 
 
 ## C05 — Detailed Design & Unit Verification
 
-Vybraná software unit:
+Vybraná software unit: **správa expirace čekající rezervace (pending expiration)** — jednotka, kterou tým v C05 skutečně rozpracoval (C03 C2, návaznost REQ-11/BR-08). Baseline: commit `07e5018` (main), C05 slice z větve `feature/c05-detailed-design` je do main začleněn. Návrh: `docs/architecture-and-decisions.md` od ř. 60; evidence: `docs/evidence-and-evolution.md` od ř. 78.
 
 | ID | Odpověď | Evidence / komentář |
 |---|---|---|
-| D1 Design intent je explicitní a pochopitelný | | |
-| D2 DD odpovídá skutečné implementaci | | |
-| D3 Unit/component tests jsou odvoditelné z DD | | |
-| D4 Relevantní branches/boundaries/states/failures jsou ověřeny | | |
-| D5 Vybraný test má smysluplný oracle/expected result | | |
+| D1 Design intent je explicitní a pochopitelný | YES | `architecture-and-decisions.md` ř. 60–240: odpovědnosti D1–D6, kontrakty, algoritmus, UML i sequence. |
+| D2 DD odpovídá skutečné implementaci | YES | Kontrakty sedí na kód: `FinitePendingExpirationPolicy.java`, `ExpirationService.java`, `Reservation.java:59`, `NotificationService.java:11`. |
+| D3 Unit/component tests jsou odvoditelné z DD | YES | Evidence (ř. 84) mapuje všech 14 testů na D1–D6, všechny v kódu existují (8+4+2). |
+| D4 Relevantní branches/boundaries/states/failures jsou ověřeny | YES | Větve z DD (ř. 167) pokryty testy: timeout/cap, overflow, ns hranice, stavy, rollback, 59/60/61 s, souběhy. |
+| D5 Vybraný test má smysluplný oracle/expected result | YES | `expiresExactlyAtDeadlineWithNanosecondPrecision`: oracle plyne z pravidla now >= deadline a BR-08, ne z kódu. |
 
 ## Candidate findings
 
 ### F1
 
 ```text
-Source: C03
-Engineering claim: Systém podle ADR-01 používá k zabránění dvojí rezervace stejného sedadla autoritativní kontrolu přímo na úrovni databáze.
-Expected: Podle ADR-01 a diagramu H1 má databáze exkluzivitu sedadel vynucovat (např. přes unique constraint) a při kolizi zápis zamítnout.
-Observed: Kód tuto databázovou kontrolu neimplementuje. Místo toho spoléhá na aplikační pre-check (metoda countOtherAllocations() v ReservationService).
-Evidence: Zdrojový kód ReservationService.java, C03 (položka J-01).
-Verification performed: inspect concrete code path
+Source:
+C03
+
+Engineering claim:
+Systém podle ADR-01 používá k zabránění dvojí rezervace stejného sedadla
+autoritativní kontrolu přímo na úrovni databáze.
+
+Expected:
+Podle ADR-01 a diagramu H1 má databáze exkluzivitu sedadel vynucovat
+(např. přes unique constraint) a při kolizi zápis zamítnout.
+
+Observed:
+Kód tuto databázovou kontrolu neimplementuje. Místo toho spoléhá
+na aplikační pre-check (metoda countOtherAllocations() v ReservationService).
+
+Evidence:
+Zdrojový kód ReservationService.java, C03 (položka J-01); blíže
+docs/c03.md ř. 114 a 150 (ADR-01 volí Alternative B — „database
+authoritatively enforces exclusive Resource allocation“) a ř. 459 (J-01:
+reservation_seats je unique pouze na (reservation_id, seat_id));
+Reservation.java:24 potvrzuje jen tento constraint, žádnou DB kontrolu
+aktivních alokací.
+
+Verification performed:
+inspect concrete code path — controla Reservation.java (jedinečné
+omezení), ReservationService.confirm() (countOtherAllocations pod
+screening zámkem) a srovnání s textem ADR-01/J-01; nezávisle potvrzeno
+v hodnoceném commitu.
+
 Result: VERIFIED FINDING
 ```
 
@@ -93,25 +116,66 @@ Result: VERIFIED FINDING
 
 ```text
 Source:
+C05 — docs/evidence-and-evolution.md
+
 Engineering claim:
+Evidence tvrdí: „Lokální implementační a dokumentační commit je označen
+tagem `c05-detailed-design-v1` na větvi `c05-detailed-design`.“
+
 Expected:
+Existující tag na existující větvi, reproduceovatelný přes
+`git rev-parse c05-detailed-design-v1`.
+
 Observed:
+`git tag -l` je prázdné, `git ls-remote --tags origin` nevrací žádný tag.
+Větev se jmenuje `feature/c05-detailed-design`, lokální `c05-detailed-design`
+neexistuje. Finální commit `a061558` je v main bez tagu.
+
 Evidence:
+git tag -l; git ls-remote --tags origin; git branch -a.
+
 Verification performed:
-Result: VERIFIED FINDING / REJECTED CANDIDATE
+přímo uvedené příkazy git nad hodnoceným repozitářem; navíc ověření,
+že commity C05 (`8c61c98`, `f5e38d2`, `a061558`) jsou začleněny v main.
+
+Result: VERIFIED FINDING — deklarovaný tag ani větev v repozitáři
+neexistují, baseline C05 je dohledatelná jen přes commity.
 ```
 
 ### F3
 
 ```text
 Source:
+C05 — docs/evidence-and-evolution.md, Tests derived from DD
+
 Engineering claim:
+Test `batchObtainsLockBeforeLoadingPendingAndUsesClock` dokládá
+„Lock před načtením, jeden Clock snapshot; due a live rozlišeny“.
+
 Expected:
+Test skutečně ověří všechny tři části tvrzení, včetně jediného
+snapshotu času.
+
 Observed:
+Test staví službu s `Clock.fixed(...)`. Fixní hodiny vracejí při každém
+volání `instant()` stejný okamžik, takže počet snapshotů nelze rozlišit.
+Test ověřuje pořadí volání (Mockito inOrder) a due/live rozlišení,
+ale „jeden Clock snapshot“ nedokazuje.
+
 Evidence:
+backend/.../ExpirationServiceTests.java:22 (Clock.fixed) a ř. 57–69 (inOrder);
+ExpirationService.java:41 (jediné volání clock.instant() — kód sám je v pořádku).
+
 Verification performed:
-Result: VERIFIED FINDING / REJECTED CANDIDATE
+inspekce testu a služby: designové pravidlo „jeden snapshot na jeden sweep“
+v kódu platí, ale uvedený test ho nemůže vyvrátit ani potvrdit;
+tvrzení evidence tedy částečně přeceňuje sílu důkazu.
+
+Result: VERIFIED FINDING — slabý, ale skutečný overclaim verification
+evidence; kód vyhovuje, navrhuji zpřesnit tvrzení v tabulce
+(případně počítat volání přes mock Clock).
 ```
+
 
 ## Owner disposition
 
