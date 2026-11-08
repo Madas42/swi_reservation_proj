@@ -120,10 +120,17 @@ Commit/tag:
 ## C08 / Step 0 — Baseline Identification
 
 * **Baseline Commit/Tag:** `3f8a2b1` (aktuální stabilní commit rezervačního systému kina)
-* **Runtime:** Java 21, Spring Boot, Maven[span_0](start_span)[span_0](end_span)
-* **Test Database Config:** Izolovaná souborová H2 databáze (`./data/cinema-reservation`), automatické generování schématu přes Hibernate, předvyplněná testovací data (kino, sedadla, promítání)[span_1](start_span)[span_1](end_span)
+
+
+* **Runtime:** Java 21, Spring Boot, Maven
+
+
+* **Test Database Config:** Izolovaná souborová H2 databáze (`./data/cinema-reservation`), automatické generování schématu přes Hibernate, předvyplněná testovací data (kino, sedadla, promítání)
+
+
 * **Test Command:** `./mvnw verify`
 * **Security / Secrets:** Žádná hesla ani citlivé údaje nejsou uloženy v kódu (isolated local environment)
 * **Spec & Architecture Reference:** 
-  * Specifikace: `REQ-03` / Business pravidlo `BR-02` (Exkluzivní zdroj / zákaz překryvu potvrzených rezervací)[span_2](start_span)[span_2](end_span)
-  * Implementační odkaz: `ReservationPersistenceTest`[span_3](start_span)[span_3](end_span)
+  * Specifikace: `REQ-03` / Business pravidlo `BR-02` (Exkluzivní zdroj / zákaz překryvu potvrzených rezervací)
+
+* Implementační odkaz: `ReservationPersistenceTest
