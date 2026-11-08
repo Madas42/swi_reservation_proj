@@ -116,3 +116,14 @@ Design ↔ implementation mismatch:
 Resolution:
 Remaining design risk:
 Commit/tag:
+
+## C08 / Step 0 — Baseline Identification
+
+* **Baseline Commit/Tag:** `git rev-parse --short HEAD`
+* **Runtime:** Java 21, Spring Boot, Maven[span_0](start_span)[span_0](end_span)
+* **Test Database Config:** Isolated H2 file database (`./data/cinema-reservation`), automated schema creation via Hibernate, pre-seeded test data (cinema room, 40 seats, films, screenings)[span_1](start_span)[span_1](end_span)
+* **Test Command:** `./mvnw verify` (neбо `./mvnw test`)
+* **Security / Secrets:** No secrets stored (isolated local environment)
+* **Spec & Architecture Reference:** 
+  * Spec: `REQ-03` / Business Rule `BR-02` (Exclusive resource / seat overlap constraint)[span_2](start_span)[span_2](end_span)
+  * Implementation reference: `ReservationPersistenceTest`[span_3](start_span)[span_3](end_span)
