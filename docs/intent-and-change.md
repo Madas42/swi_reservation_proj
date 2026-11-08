@@ -64,10 +64,15 @@ Why it is relevant to our reservation system: Reliable reservation system.
 ## C08 Step 3 / CR-08 — Controlled Change Card
 
 Request source and need: manager — old undecided requests must not become valid bookings later.
+
 Before: 3f8a2b1; spec REQ-03/BR-02 @ <spec-revision>; ADR <C03 link>; schema Hibernate; no secrets.
+
 Old behavior: PENDING_APPROVAL without deadline; approval respects BR-02.
+
 New behavior: after createdAt + 30 min no transition to CONFIRMED. Out of scope: new worker, UI redesign, technology change.
+
 AC-01 approval before deadline succeeds; AC-02 after deadline no CONFIRMED; AC-03 exact semantics at 30:00; AC-04 BR-02 preserved.
+
 Impact method: traced AC-02 from the status owner (call-site search at 3f8a2b1) through persistence and consumers; reviewed test suite incl. ReservationPersistenceTest.
 
 | Dimension / exact artifact | CHANGE/CHECK/NO IMPACT + why | Delta/verification | Owner/evidence |
@@ -81,9 +86,14 @@ Impact method: traced AC-02 from the status owner (call-site search at 3f8a2b1) 
 | Operation/recovery | CHECK — existing pending rows reinterpretation; approval/expiry race; EXPIRED not reversible | rollback/compatibility in release record | <owner> |
 
 Alternatives: (Step 4)
+
 Inaction consequences: undecided requests remain approvable indefinitely.
 Peer reviewer: (Step 5)
+
 Decision ACCEPT/REJECT/DEFER/NO_CHANGE: (Step 5)
+
 If ACCEPT: smallest delta + C09 tests: (Step 5)
+
 If NO_CHANGE/REJECT: N/A
+
 Open uncertainty: approval/expiry race — race test or declared residual risk.
