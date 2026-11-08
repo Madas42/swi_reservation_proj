@@ -139,8 +139,11 @@ Commit/tag:
 ### TC-C08-01 — Positive: approval of pending reservation without conflict
 
 Test basis: BR-02 @ <spec-revision> (exclusive resource: no two overlapping CONFIRMED); REQ-03 approval flow (> 10 seats -> PENDING_APPROVAL); risk ID N/A.
+
 Baseline: 70931c8 (last code commit; docs-only commits after); spec REQ-03/BR-02; schema Hibernate ddl-auto=update; runtime observed Java 27.0.1 (pom target 17), Spring Boot 3.3.4, Maven (no wrapper); command mvn test; tests: ReservationLifecycleTest (@SpringBootTest, real H2 persistence).
+
 Preconditions: future screening S1, room with 12 seats; customer logged. No reservations for S1.
+
 Test data: B2 = draft for all 12 seats (large -> requires approval); timestamps LocalDateTime (server-local).
 
 | # | Action | Expected BEFORE | Actual AFTER | Evidence |
@@ -151,17 +154,25 @@ Test data: B2 = draft for all 12 seats (large -> requires approval); timestamps 
 | 4 | Read persisted state (ReservationRepository, ReservedSeatRepository) | B2 CONFIRMED; seats held exactly once; BR-02 intact | status(B2) CONFIRMED; seats held once; BR-02 intact (assertions held) | run A |
 
 Final postcondition: direct repository/SQL read — status(B2) = CONFIRMED, one allocation per seat, zero double-allocated seats at S1.
+
 Verdict: PASS. Run A (executed 2026-11-09T00:25:20+01:00): mvn test -Dtest=ReservationLifecycleTest#approvePendingReservationConfirmsIt — Tests run: 1, Failures: 0, Errors: 0; BUILD SUCCESS. Runtime Java 27.0.1, Spring Boot 3.3.4; DB jdbc:h2:file:./data/cinema-reservation (SA), @Transactional rollback keeps data unchanged; report target/surefire-reports/com.cinema.reservation.ReservationLifecycleTest.txt.
+
 If FAIL: —
+
 If BLOCKED: —
+
 Not covered: concurrent approvals (race test); unauthenticated approve call (AdminController.isLoggedIn only redirects).
 
 ### TC-C08-02 — Negative: reservation conflicting on a taken seat is rejected
 
 Test basis: BR-02 @ <spec-revision>; risk ID N/A.
+
 Note: seats are allocated at confirm time (also for PENDING_APPROVAL), so a pending reservation conflicting on the same seat cannot exist through the real interface — BR-02 is enforced at allocation (SeatAvailability.allocateIfAvailable + DB unique constraint (screening_id, seat_id)).
+
 Baseline: 70931c8; Hibernate ddl-auto=update; runtime observed Java 27.0.1 (pom target 17), Spring Boot 3.3.4, Maven; command mvn test.
+
 Preconditions: future screening S1, seats incl. A1; two customers. B1 draft seat A1; B2 draft seat A1 (same seat).
+
 Test data: B1/B2 claim the same seat at the same screening; timestamps LocalDateTime (server-local).
 
 | # | Action | Expected BEFORE | Actual AFTER | Evidence |
@@ -172,7 +183,11 @@ Test data: B1/B2 claim the same seat at the same screening; timestamps LocalDate
 | 4 | Repeat with a pending blocker: confirm large PENDING holding A1, then confirm small draft on A1 | small draft rejected, stays DRAFT, no allocation | small draft rejected, stays DRAFT, no allocation (assertions held) | run B |
 
 Final postcondition: same-seat CONFIRMED pair count = 0; status(B2) != CONFIRMED read directly from persistence.
+
 Verdict: PASS. Run B (executed 2026-11-09T00:25:31+01:00): mvn test -Dtest='ReservationLifecycleTest#confirmRejectsSeatTakenByAnotherConfirmedReservation+pendingApprovalSeatsBlockOtherReservations' — Tests run: 2, Failures: 0, Errors: 0; BUILD SUCCESS. Same runtime and DB as run A; report target/surefire-reports/com.cinema.reservation.ReservationLifecycleTest.txt.
+
 If FAIL: —
+
 If BLOCKED: —
+
 Not covered: race of two simultaneous confirms (DB unique constraint backs the check but has no test).
