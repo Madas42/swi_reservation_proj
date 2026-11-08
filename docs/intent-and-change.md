@@ -72,12 +72,12 @@ Impact method: traced AC-02 from the status owner (call-site search at 3f8a2b1) 
 
 | Dimension / exact artifact | CHANGE/CHECK/NO IMPACT + why | Delta/verification | Owner/evidence |
 |---|---|---|---|
-| Spec/BR/state | CHANGE — expiry rule; PENDING_APPROVAL → EXPIRED edge | define ACs, exact 30:00 boundary | <owner>; reviewed spec |
-| Architecture/ownership/interfaces | CHECK — single status writer (call-site search); admin/import/worker: NO IMPACT — this write path does not exist | confirm owner + all writer paths | <owner>; C03/ADR link |
-| Detailed design/code | CHANGE — guard now(clock) vs createdAt + TTL; injected Clock; idempotent retries | unit contract + rejection type | <owner>; unit tests |
-| Data/schema/migration | CHECK — no migration tool (Hibernate ddl-auto); EXPIRED enum; policy for old PENDING rows in ./data/cinema-reservation | enum change; test with pre-existing rows | <owner>; ReservationPersistenceTest |
+| Spec/BR/state | CHANGE — expiry rule; PENDING_APPROVAL → EXPIRED edge | define ACs, exact 30:00 boundary | <owner> reviewed spec |
+| Architecture/ownership/interfaces | CHECK — single status writer (call-site search); admin/import/worker: NO IMPACT — this write path does not exist | confirm owner + all writer paths | <owner> C03/ADR link |
+| Detailed design/code | CHANGE — guard now(clock) vs createdAt + TTL; injected Clock; idempotent retries | unit contract + rejection type | <owner> unit tests |
+| Data/schema/migration | CHECK — no migration tool (Hibernate ddl-auto); EXPIRED enum; policy for old PENDING rows in ./data/cinema-reservation | enum change; test with pre-existing rows | <owner> ReservationPersistenceTest |
 | Configuration/CI/release | CHECK — TTL configurable, documented default; server clock UTC | config smoke; units in README | <owner> |
-| Tests/integration/risks | CHANGE — regression of approval + BR-02; boundary oracle before implementation | re-run TC-C08-01/02; expiry tests 29:59 / 30:00 / 30:01 | <owner>; ./mvnw verify report |
+| Tests/integration/risks | CHANGE — regression of approval + BR-02; boundary oracle before implementation | re-run TC-C08-01/02; expiry tests 29:59 / 30:00 / 30:01 | <owner> ./mvnw verify report |
 | Operation/recovery | CHECK — existing pending rows reinterpretation; approval/expiry race; EXPIRED not reversible | rollback/compatibility in release record | <owner> |
 
 Alternatives: (Step 4)
