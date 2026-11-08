@@ -65,29 +65,30 @@ Why it is relevant to our reservation system: Reliable reservation system.
 
 Request source and need: manager — old undecided requests must not become valid bookings later.
 
-Before: 3f8a2b1; spec REQ-03/BR-02 @ <spec-revision>; ADR <C03 link>; schema Hibernate; no secrets.
+Before: 70931c8 (last code commit; 3f8a2b1 was the assignment's demo value, not a real commit); spec REQ-03/BR-02 @ <spec-revision>; ADR <C03 link>; schema Hibernate ddl-auto=update; H2 file ./data/cinema-reservation; no secrets.
 
-Old behavior: PENDING_APPROVAL without deadline; approval respects BR-02.
+Old behavior: PENDING_APPROVAL (> 10 seats, seats already allocated at confirm) without deadline; approve via ApprovalWorkflow / AdminController POST /admin/reservations/{id}/approve.
 
-New behavior: after createdAt + 30 min no transition to CONFIRMED. Out of scope: new worker, UI redesign, technology change.
+New behavior: after deadline no PENDING_APPROVAL -> CONFIRMED; late attempt stores EXPIRED (enum value already exists for expired drafts). Out of scope: new worker, UI redesign, technology change.
 
-AC-01 approval before deadline succeeds; AC-02 after deadline no CONFIRMED; AC-03 exact semantics at 30:00; AC-04 BR-02 preserved.
+AC-01 approval before deadline succeeds; AC-02 after deadline no CONFIRMED; AC-03 exact semantics at the boundary; AC-04 BR-02 preserved.
 
-Impact method: traced AC-02 from the status owner (call-site search at 3f8a2b1) through persistence and consumers; reviewed test suite incl. ReservationPersistenceTest.
+Impact method: traced AC-02 from ApprovalWorkflow.approve through ReservationRepository / ReservedSeatRepository to consumers (AdminController, NotificationIntegration); reviewed ReservationLifecycleTest at 70931c8.
 
-| Dimension / exact artifact | CHANGE/CHECK/NO IMPACT + why | Delta/verification | Owner/evidence |
+| Dimension / exact artifact | CHANGE/CHECK/NO IMPACT and why | Delta/verification | Owner/evidence |
 |---|---|---|---|
-| Spec/BR/state | CHANGE — expiry rule; PENDING_APPROVAL → EXPIRED edge | define ACs, exact 30:00 boundary | <owner> reviewed spec |
-| Architecture/ownership/interfaces | CHECK — single status writer (call-site search); admin/import/worker: NO IMPACT — this write path does not exist | confirm owner + all writer paths | <owner> C03/ADR link |
-| Detailed design/code | CHANGE — guard now(clock) vs createdAt + TTL; injected Clock; idempotent retries | unit contract + rejection type | <owner> unit tests |
-| Data/schema/migration | CHECK — no migration tool (Hibernate ddl-auto); EXPIRED enum; policy for old PENDING rows in ./data/cinema-reservation | enum change; test with pre-existing rows | <owner> ReservationPersistenceTest |
-| Configuration/CI/release | CHECK — TTL configurable, documented default; server clock UTC | config smoke; units in README | <owner> |
-| Tests/integration/risks | CHANGE — regression of approval + BR-02; boundary oracle before implementation | re-run TC-C08-01/02; expiry tests 29:59 / 30:00 / 30:01 | <owner> ./mvnw verify report |
-| Operation/recovery | CHECK — existing pending rows reinterpretation; approval/expiry race; EXPIRED not reversible | rollback/compatibility in release record | <owner> |
+| Spec/BR/state | CHANGE — new PENDING_APPROVAL -> EXPIRED edge; EXPIRED already exists for expired DRAFTs | define ACs, exact boundary semantics | <owner>; reviewed spec |
+| Architecture/ownership/interfaces | CHECK — status writers: ReservationManagement (lifecycle), ApprovalWorkflow (approve/reject); seat conflicts protected by DB unique constraint (screening_id, seat_id) incl. direct SQL; admin/import/worker: NO IMPACT — this write path does not exist | call-site search of status writes | <owner>; C03/ADR link |
+| Detailed design/code | CHANGE — guard in ApprovalWorkflow.approve: deadline = accepted timestamp + TTL, Clock/now injectable; late repeated attempt ends EXPIRED | unit contract + outcome message | <owner>; ReservationLifecycleTest |
+| Data/schema/migration | CHECK — no migration tool (ddl-auto=update); policy for existing PENDING_APPROVAL rows in ./data/cinema-reservation; Reservation.expiresAt persisted (LocalDateTime) | test with pre-existing rows; verify on regenerated schema | <owner> |
+| Configuration/CI/release | CHECK — new TTL constant per existing pattern (DRAFT_TTL_MINUTES=15, CANCEL_DEADLINE_MINUTES=30 in ReservationManagement); times are LocalDateTime server-local — document | documented default; config smoke | <owner> |
+| Tests/integration/risks | CHANGE — regression of approval + BR-02; boundary oracle before implementation | re-run approvePendingReservationConfirmsIt, confirmRejectsSeatTakenByAnotherConfirmedReservation, pendingApprovalSeatsBlockOtherReservations, approveAndRejectOnlyWorkOnPendingApproval; add expiry tests at 29:59 / 30:00 / 30:01 | <owner>; mvn test report |
+| Operation/recovery | CHECK — pending rows in file DB become non-approvable after release; approval/expiry race; EXPIRED not reversible | rollback/compatibility in release record | <owner> |
 
-Alternatives: (Step 4)
+Alternatives: (Step 4 — note: DRAFT expiry infra already exists: ReservationManagement.isDraftExpired + ExpirationManager @Scheduled 60 s)
 
 Inaction consequences: undecided requests remain approvable indefinitely.
+
 Peer reviewer: (Step 5)
 
 Decision ACCEPT/REJECT/DEFER/NO_CHANGE: (Step 5)
