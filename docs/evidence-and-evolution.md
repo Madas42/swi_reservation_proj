@@ -88,7 +88,7 @@ Behaviour verification:
 Remaining uncertainty / risk: Chování systému při vysoké zátěži a paralelním vytváření rezervací na identická místa.
 Commit/tag: v0.2-c03-part-a
 
-## C05 DD Verification Evidence ----- TODO rest of points
+## C05 DD Verification Evidence
 Tests derived from DD:
 Unit/component tests executed:
 Design ↔ implementation mismatch:
