@@ -175,7 +175,7 @@ public interface SeatAvailability {
 
 **Algorithm / decision logic:**
 
-Následující algoritmus zajišťuje ověření dostupnosti sedadel, zamezení souběžných konfliktů (vynucení pravidel BR-01 a BR-02)[cite: 1, 2] a případné schválení administrátorem pro velká skupinová rezervování (více než 10 míst):
+Následující algoritmus zajišťuje ověření dostupnosti sedadel, zamezení souběžných konfliktů (vynucení pravidel BR-01 a BR-02) a případné schválení administrátorem pro velká skupinová rezervování (více než 10 míst):
 
 ```java
 public AllocationResult allocateSeats(Long screeningId, List<Long> seatIds, Long reservationId) {
