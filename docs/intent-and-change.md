@@ -61,6 +61,17 @@ Category: Q
 Concrete pressure: Více zákazníků v jeden čas.
 Why it is relevant to our reservation system: Reliable reservation system.
 
+## C08 / Step 1 — Change Request & Acceptance Conditions
+
+* **Zdroj a potřeba:** Správce kinofiltru / administrátor: stará nevyřízená žádost o rezervaci (např. ve stavu PENDING_APPROVAL) nesmí zůstatviset v systému neomezeně dlouho a blokovat sedadla pro ostatní diváky. Po uplynutí časového limitu (např. 30 minut) musí vypršet.
+* **Předchozí chování:** Žádost ve stavu PENDING_APPROVAL zůstávala platná bez časového omezení, dokud ji správce ručně neschválil nebo nezrušil.
+* **AC-01 (pozitivní):** Schválení (Confirm/Approve) žádosti před uplynutím 30minutového limitu při splnění ostatních podmínek proběhne úspěšně a změní stav na CONFIRMED.
+* **AC-02 (negativní):** Pokus o schválení žádosti po uplynutí 30 minut nesmí vytvořit stav CONFIRMED; systém požadavek odmítne a stav se odpovídajícím způsobem aktualizuje (např. na EXPIRED).
+* **AC-03 (hranice):** Přesný okamžik na hranici limitu (createdAt + 30 min) má jednoznačně definované a otestované očekávané chování.
+* **AC-04 (regrese):** Základní invariant systému (dávej pozor na BR-02: dvě potvrzené rezervace stejného sedadla/zdroje se nesmí překrývat) zůstává plně zachován a nedotčen.
+* **Mimo rozsah:** Automatický pozadový proces (cron worker / timer), který by čistil databázi proaktivně, nebo redesign uživatelského rozhraní – o těchto technických mechanismech se v tomto kroku nerozhoduje.
+
+
 ## C08 Step 3 / CR-08 — Controlled Change Card
 
 Request source and need: manager — old undecided requests must not become valid bookings later.
