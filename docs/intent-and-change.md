@@ -45,7 +45,7 @@ Rezeravce lístků s místem v kině.
 Confirmed reservations for the same resource must not overlap.
 
 ## Domain-specific business rule
-Refund 30 mins before screening.
+Refund 30 mins before screening is not allowed.
 
 ## External / system boundary
 Notification Service.
