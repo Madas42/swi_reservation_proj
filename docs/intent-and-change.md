@@ -103,44 +103,32 @@ Alternatives: (Step 4 — note: DRAFT expiry infra already exists: ReservationMa
 **Alternative Analysis :**
 | Varianta | Jak řeší potřebu (Splnění AC) | Výhody | Náklady / rizika | Jak ověříme |
 | :--- | :--- | :--- | :--- | :--- |
-| **A: Lazy expiry (Jen Guard v ApprovalWorkflow)** | Kontrola času se přidá do `approve()`. Opožděný pokus admina po uplynutí 30 min uloží `EXPIRED`. | Nejtriviálnější úprava. Zcela bez asynchronních procesů. | Nevyřízené rezervace zůstanou viset v DB, dokud na ně admin neklikne. Sál se proaktivně neuvolní. | Test `approve()` těsně před a po hranici 30 minut. |
+| **A: Lazy expiry (Guard v ApprovalWorkflow)** | Kontrola času se přidá do `approve()`. Opožděný pokus admina po uplynutí TTL uloží `EXPIRED`. | Nejtriviálnější úprava. Zcela bez asynchronních procesů. | Nevyřízené rezervace zůstanou viset v DB, dokud na ně admin neklikne. Sál se proaktivně neuvolní. | Test `approve()` těsně před a po hranici TTL. |
 | **B: Využití existujícího ExpirationManageru** | Guard v `approve()` + rozšíření stávajícího `@Scheduled 60 s` workeru, aby čistil i `PENDING_APPROVAL`. | Sál se uvolňuje sám. Nevyžaduje vývoj *nového* workeru (recykluje stávající). | Zavedení race condition (souběhu) mezi kliknutím admina a běžícím workerem ve stejnou vteřinu. | Test souběhu (`approve` vs. worker). |
-| **C: Procesní upozornění (Bez úpravy kódu)** | Backend se nemění, instruuje se personál, že žádosti starší 30 minut nesmí potvrdit. | Nezasahuje se do kódu. Bez rizika regrese. | Nesplňuje AC-02, systém technicky dál umožňuje omylem schválit expirovanou žádost. | Prověření provozního manuálu kina. |
+| **C: Procesní upozornění (Bez úpravy kódu)** | Backend se nemění, instruuje se personál, že žádosti starší než TTL nesmí potvrdit. | Nezasahuje se do kódu. Bez rizika regrese. | Nesplňuje AC-02, systém technicky dál umožňuje omylem schválit expirovanou žádost. | Prověření provozního manuálu kina. |
 
 ## C08 Step 5
 
 **Inaction consequences / feasible compensation:** 
-Nevyřízené žádosti (`PENDING_APPROVAL`) zůstanou schválitelné donekonečna; bez programátorské úpravy kódu neexistuje žádná reálná provozní kompenzace.
+Nevyřízené žádosti (`PENDING_APPROVAL`) zůstanou schválitelné donekonečna.
 
 **Peer reviewer and challenged assumption:** 
-[Doplň jméno kolegy, např. Jakub Češka] — zpochybněný předpoklad: zda je nutné psát nový asynchronní worker (vyvráceno, efektivně recyklujeme existující infrastrukturu `ExpirationManageru`).
 
 **Decision ACCEPT / REJECT / DEFER / NO_CHANGE, owner, date, reason:** 
-`ACCEPT`, Vlastník: Tým C08, Datum: [Doplň datum], Důvod: Varianta B plní všechna akceptační kritéria (AC-01 až AC-04) a proaktivně uvolňuje kapacity kina pomocí rozšíření již existujícího skriptu namísto vývoje nové technologie.
+`ACCEPT`, Vlastník: Tým C08, Datum: 2.11.2026, Důvod: Varianta B plní všechna akceptační kritéria a proaktivně uvolňuje kapacity kina pomocí rozšíření již existujícího skriptu.
 
 **If ACCEPT: smallest change and acceptance tests to perform in C09:**
 *   **Nejmenší změna (Smallest delta):** 
-    1. Přidat časový guard do `ApprovalWorkflow.approve` (porovnání s TTL). 
-    2. Rozšířit existující `ExpirationManager` (@Scheduled) o zpracování a přepínání stavu `PENDING_APPROVAL` na `EXPIRED`.
+    1. Přidat časový guard do `ApprovalWorkflow.approve` (porovnání s konfigurovatelným TTL pro pending). 
+    2. Rozšířit existující `ExpirationManager` (@Scheduled) o zpracování stavu `PENDING_APPROVAL`.
 *   **Akceptační testy pro C09:** 
-    1. Hranice (Boundary testy pro 29:59 / 30:00 / 30:01). 
+    1. Hranice (Boundary testy pro přesný okamžik vypršení zvoleného TTL). 
     2. Regrese původního schvalování (`approvePendingReservationConfirmsIt`). 
-    3. Test souběhu (Race condition test) pro ošetření střetu mezi workerem a adminem.
+    3. Test souběhu (Race condition test) pro střet mezi workerem a adminem.
 
 **If NO_CHANGE/REJECT:** 
 N/A
 
 **Open uncertainty and next trigger:** 
-Otevřená nejistota ohledně souběhu (approval/expiry race) — dalším spouštěčem (triggerem) je reálné spuštění testu souběhu během implementace v nadcházejícím cvičení C09.
-
-Inaction consequences: undecided requests remain approvable indefinitely.
-
-Peer reviewer: (Step 5)
-
-Decision ACCEPT/REJECT/DEFER/NO_CHANGE: (Step 5)
-
-If ACCEPT: smallest delta + C09 tests: (Step 5)
-
-If NO_CHANGE/REJECT: N/A
-
-Open uncertainty: approval/expiry race — race test or declared residual risk.
+1. **Chybějící přesná hodnota TTL pro pending rezervace** 
+2. **Approval/expiry race condition**
