@@ -97,6 +97,12 @@ Impact method: traced AC-02 from ApprovalWorkflow.approve through ReservationRep
 | Operation/recovery | CHECK — pending rows in file DB become non-approvable after release; approval/expiry race; EXPIRED not reversible | rollback/compatibility in release record | <owner> |
 
 Alternatives: (Step 4 — note: DRAFT expiry infra already exists: ReservationManagement.isDraftExpired + ExpirationManager @Scheduled 60 s)
+**Alternative Analysis (Step 4):**
+| Varianta | Jak řeší potřebu (Splnění AC) | Výhody | Náklady / rizika | Jak ověříme |
+| :--- | :--- | :--- | :--- | :--- |
+| **A: Lazy expiry (Jen Guard v ApprovalWorkflow)** | Kontrola času se přidá do `approve()`. Opožděný pokus admina po uplynutí 30 min uloží `EXPIRED`. | Nejtriviálnější úprava. Zcela bez asynchronních procesů. | Nevyřízené rezervace zůstanou viset v DB, dokud na ně admin neklikne. Sál se proaktivně neuvolní. | Test `approve()` těsně před a po hranici 30 minut. |
+| **B: Využití existujícího ExpirationManageru** | Guard v `approve()` + rozšíření stávajícího `@Scheduled 60 s` workeru, aby čistil i `PENDING_APPROVAL`. | Sál se uvolňuje sám. Nevyžaduje vývoj *nového* workeru (recykluje stávající). | Zavedení race condition (souběhu) mezi kliknutím admina a běžícím workerem ve stejnou vteřinu. | Test souběhu (`approve` vs. worker). |
+| **C: Procesní upozornění (Bez úpravy kódu)** | Backend se nemění, instruuje se personál, že žádosti starší 30 minut nesmí potvrdit. | Nezasahuje se do kódu. Bez rizika regrese. | Nesplňuje AC-02, systém technicky dál umožňuje omylem schválit expirovanou žádost. | Prověření provozního manuálu kina. |
 
 Inaction consequences: undecided requests remain approvable indefinitely.
 
