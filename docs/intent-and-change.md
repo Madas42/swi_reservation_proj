@@ -152,13 +152,13 @@ N/A
 ## C09 / Krok 1 — Vymezení nejmenší skutečné změny (Delta)
 
 * **Co se mění v kódu a logice (Changes):**
-  * **Časový guard:** Přidání kontroly stáří rezervace do metody `ApprovalWorkflow.approve()` (porovnání času vytvoření `createdAt` s konfigurovatelným TTL a injektovatelným `Clock`).
+  * **Časový guard:** Přidání kontroly stáří rezervace do metody `ApprovalWorkflow.approve()` (porovnání času vytvoření `createdAt` s konfigurovatelným TTL).
   * **Proaktivní exspirace:** Rozšíření stávajícího plánovače (`ExpirationManager` se `@Scheduled` spouštěním) o zpracování stavu `PENDING_APPROVAL`, aby se staré nevyřízené žádosti automaticky měnily na `EXPIRED`.
 * **Co zůstává stejné (N/A / Nedotčené oblasti):**
   * Samotné zakládání nových rezervací (`Create reservation`) se nemění.
   * Způsob ochrany proti kolizím v databázi (unikátní index nad `screening_id` a `seat_id`) zůstává netknutý.
   * Uživatelské rozhraní ani externí notifikační služba se v této fázi nemění.
 * **Mapování testů (Test map):**
-  * Přidání nových testů pro ověření časových hranic (`TC-CR08-03`).
+  * Přidání nových testů pro ověření časových hranic.
   * Regresní spuštění původního schvalování (`approvePendingReservationConfirmsIt`).
   * Test souběhu (*race condition*) pro případný střet mezi spuštěným workerem a schvalováním ze strany administrátora.
