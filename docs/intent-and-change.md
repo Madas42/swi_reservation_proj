@@ -132,3 +132,33 @@ N/A
 **Open uncertainty and next trigger:** 
 1. **Chybějící přesná hodnota TTL pro pending rezervace** 
 2. **Approval/expiry race condition**
+
+
+
+
+
+## C09 / Krok 0 — Převzetí rozhodnutí z C08
+
+* **Odkaz na rozhodnutí:** Schválená změnová karta (`CR-08`) v souboru `docs/intent-and-change.md`, kde bylo pro staré nevyřízené žádosti (`PENDING_APPROVAL`) schváleno řešení **`ACCEPT`** (zavedení časového limitu / TTL – zrušení nebo exspirace po 30 minutách).
+* **Výchozí stav (Before):**
+  * `before_commit`: `70931c8` (poslední stabilní commit s plnou strukturou rezervačního systému kina).
+  * Konfigurace databáze: Lokální H2 souborová databáze (`./data/cinema-reservation`), schéma spravované automaticky přes Hibernate (`ddl-auto=update`), bez uložených citlivých údajů či hesel v kódu.
+* **Akceptační kritéria (AC) převzatá z C08:**
+  * `AC-01` (Pozitivní): Schválení rezervace (`Approve`) před uplynutím 30minutového limitu proběhne úspěšně a změní stav na `CONFIRMED`.
+  * `AC-02` (Negativní): Pokus o schválení žádosti po uplynutí 30 minut nesmí vytvořit stav `CONFIRMED`; systém požadavek odmítne a uloží stav `EXPIRED`.
+  * `AC-03` (Hranice): Přesné chování na hranici limitu (`createdAt + 30 min`) má jednoznačně definované očekávání (dle schválené specifikace se v tomto čase již zamítá).
+  * `AC-04` (Regrese): Základní invariant systému (`BR-02` — dvě potvrzené rezervace stejného sedadla/zdroje se nesmí překrývat) zůstává plně zachován.
+
+## C09 / Krok 1 — Vymezení nejmenší skutečné změny (Delta)
+
+* **Co se mění v kódu a logice (Changes):**
+  * **Časový guard:** Přidání kontroly stáří rezervace do metody `ApprovalWorkflow.approve()` (porovnání času vytvoření `createdAt` s konfigurovatelným TTL a injektovatelným `Clock`).
+  * **Proaktivní exspirace:** Rozšíření stávajícího plánovače (`ExpirationManager` se `@Scheduled` spouštěním) o zpracování stavu `PENDING_APPROVAL`, aby se staré nevyřízené žádosti automaticky měnily na `EXPIRED`.
+* **Co zůstává stejné (N/A / Nedotčené oblasti):**
+  * Samotné zakládání nových rezervací (`Create reservation`) se nemění.
+  * Způsob ochrany proti kolizím v databázi (unikátní index nad `screening_id` a `seat_id`) zůstává netknutý.
+  * Uživatelské rozhraní ani externí notifikační služba se v této fázi nemění.
+* **Mapování testů (Test map):**
+  * Přidání nových testů pro ověření časových hranic (`TC-CR08-03`).
+  * Regresní spuštění původního schvalování (`approvePendingReservationConfirmsIt`).
+  * Test souběhu (*race condition*) pro případný střet mezi spuštěným workerem a schvalováním ze strany administrátora.
