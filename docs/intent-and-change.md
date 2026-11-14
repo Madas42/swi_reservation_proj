@@ -136,21 +136,49 @@ N/A
 
 
 ## C09 — Integration, CI and Release Record
-C08 Change Card and reviewed ACCEPT/NO_CHANGE/REJECT rationale: ACCEPT (schváleno v C08: zavedení 30minutového TTL pro PENDING_APPROVAL žádosti, proaktivní exspirace přes ExpirationManager a oprava asynchronního zpracování požadavků).
-Before and after commit/tag (identical if no-change): Before: 70931c8, After: [bude doplněno při implementaci]
-Affected claims/new AC and unchanged regression basis: Životní cyklus PENDING_APPROVAL. Nová AC: AC-01 (schválení před 30 min -> CONFIRMED), AC-02 (pokus o schválení po 30 min -> EXPIRED), AC-03 (chování na časové hranici). Regresní základ: BR-02 (zákaz překryvu potvrzených rezervací).
-Changed code/data/config/ADR and justified N/A: Časový guard v ApprovalWorkflow.approve(), rozšíření ExpirationManager (@Scheduled), oprava asynchronního neblokujícího zpracování požadavků. N/A: Uživatelské rozhraní a notifikační služba se nemění.
-Peer review: reviewer, challenged assumption, disposition: [nevyplněno / neproběhlo]
+
+**C08 Change Card and reviewed ACCEPT/NO_CHANGE/REJECT rationale:** 
+ACCEPT (schváleno v C08: zavedení 30minutového TTL pro PENDING_APPROVAL žádosti, proaktivní exspirace přes ExpirationManager a oprava asynchronního zpracování požadavků).
+
+**Before and after commit/tag (identical if no-change):** 
+Before: `70931c8`, After: [bude doplněno při implementaci]
+
+**Affected claims/new AC and unchanged regression basis:** 
+Životní cyklus PENDING_APPROVAL. Nová AC: AC-01 (schválení před 30 min -> CONFIRMED), AC-02 (pokus o schválení po 30 min -> EXPIRED), AC-03 (chování na časové hranici). Regresní základ: BR-02 (zákaz překryvu potvrzených rezervací).
+
+**Changed code/data/config/ADR and justified N/A:** 
+Časový guard v `ApprovalWorkflow.approve()`, rozšíření `ExpirationManager` (@Scheduled), oprava asynchronního neblokujícího zpracování požadavků. N/A: Uživatelské rozhraní a notifikační služba se nemění.
+
+**Peer review: reviewer, challenged assumption, disposition:** 
+[nevyplněno / neproběhlo]
+
 | Test ID | Independent accepted oracle | Exact command/data | Expected | Actual | PASS/FAIL/BLOCKED | Evidence |
 |---|---|---|---|---|---|---|
 | New behavior | TC-CR08-03 (Boundary TTL) | mvn test | Odmítnutí schválení po 30 min | [tbd] | [tbd] | [tbd] |
 | C08 regression TC-01 | approvePendingReservationConfirmsIt | mvn test | Schválení před uplynutím limitu | [tbd] | [tbd] | [tbd] |
 | C08 regression TC-02 | confirmRejectsSeatTakenByAnotherConfirmedReservation | mvn test | Zákaz překryvu sedadel dle BR-02 | [tbd] | [tbd] | [tbd] |
-Actual integration boundary and committed-state check: Lokální H2 souborová databáze (./data/cinema-reservation), schéma spravované přes Hibernate (ddl-auto=update).
-Dependency lock, runtime, DB schema, nonsecret config: Java 21, Spring Boot, Maven, H2 databáze, bez citlivých údajů v kódu.
-Clean checkout/build/test/run commands and environment: mvn clean test, mvn spring-boot:run (lokální prostředí).
-CI job or local automated script and actual log: [bude doplněno]
-Independent reproducer, exact steps and outcome: [bude doplněno]
-Artifact identity/file/hash/tag and migration assumptions: Souborová H2 databáze (./data/cinema-reservation), politika pro existující staré záznamy PENDING_APPROVAL bez explicitního expiresAt.
-Rollback/recovery limitation, residual risks: Přechod do stavu EXPIRED a exspirace dat v perzistentním úložišti jsou nevratné; případný rollback kódu automaticky nevrátí stav dat v databázi.
-Release decision READY/CONDITIONAL/HOLD, owner, rationale: CONDITIONAL, Rationale: Definice změn a analýza dopadů pro C09 jsou připraveny, čeká na provedení a ověření.
+
+**Actual integration boundary and committed-state check:** 
+Lokální H2 souborová databáze (`./data/cinema-reservation`), schéma spravované přes Hibernate (`ddl-auto=update`).
+
+**Dependency lock, runtime, DB schema, nonsecret config:** 
+Java 21, Spring Boot, Maven, H2 databáze, bez citlivých údajů v kódu.
+
+**Clean checkout/build/test/run commands and environment:** 
+`mvn clean test`, `mvn spring-boot:run` (lokální prostředí).
+
+**CI job or local automated script and actual log:** 
+[bude doplněno]
+
+**Independent reproducer, exact steps and outcome:** 
+[bude doplněno]
+
+**Artifact identity/file/hash/tag and migration assumptions:** 
+Souborová H2 databáze (`./data/cinema-reservation`), politika pro existující staré záznamy PENDING_APPROVAL bez explicitního `expiresAt`.
+
+**Rollback/recovery limitation, residual risks:** 
+Přechod do stavu `EXPIRED` a exspirace dat v perzistentním úložišti jsou nevratné; případný rollback kódu automaticky nevrátí stav dat v databázi.
+
+**Release decision READY/CONDITIONAL/HOLD, owner, rationale:** 
+`CONDITIONAL`, Rationale: Definice změn a analýza dopadů pro C09 jsou připraveny, čeká na provedení a ověření.
+
