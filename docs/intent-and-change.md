@@ -135,29 +135,22 @@ N/A
 
 
 
-## C09 / Krok 0 — Převzetí rozhodnutí z C08
-
-* **Odkaz na rozhodnutí:** Schválená změnová karta (`CR-08`) v souboru `docs/intent-and-change.md`, kde bylo pro staré nevyřízené žádosti (`PENDING_APPROVAL`) schváleno řešení **`ACCEPT`** (zavedení časového limitu / TTL – zrušení nebo exspirace po 30 minutách).
-* **Výchozí stav (Before):**
-  * `before_commit`: `70931c8` (poslední stabilní commit s plnou strukturou rezervačního systému kina).
-  * Konfigurace databáze: Lokální H2 souborová databáze (`./data/cinema-reservation`), schéma spravované automaticky přes Hibernate (`ddl-auto=update`), bez uložených citlivých údajů či hesel v kódu.
-* **Akceptační kritéria (AC) převzatá z C08:**
-  * `AC-01` (Pozitivní): Schválení rezervace (`Approve`) před uplynutím 30minutového limitu proběhne úspěšně a změní stav na `CONFIRMED`.
-  * `AC-02` (Negativní): Pokus o schválení žádosti po uplynutí 30 minut nesmí vytvořit stav `CONFIRMED`; systém požadavek odmítne a uloží stav `EXPIRED`.
-  * `AC-03` (Hranice): Přesné chování na hranici limitu (`createdAt + 30 min`) má jednoznačně definované očekávání (dle schválené specifikace se v tomto čase již zamítá).
-  * `AC-04` (Regrese): Základní invariant systému (`BR-02` — dvě potvrzené rezervace stejného sedadla/zdroje se nesmí překrývat) zůstává plně zachován.
-
-## C09 / Krok 1 — Vymezení nejmenší skutečné změny (Delta)
-
-* **Co se mění v kódu a logice (Changes):**
-  * **Časový guard:** Přidání kontroly stáří rezervace do metody `ApprovalWorkflow.approve()` (porovnání času vytvoření `createdAt` s konfigurovatelným TTL a injektovatelným `Clock`).
-  * **Proaktivní exspirace:** Rozšíření stávajícího plánovače (`ExpirationManager` se `@Scheduled` spouštěním) o zpracování stavu `PENDING_APPROVAL`, aby se staré nevyřízené žádosti automaticky měnily na `EXPIRED`.
-  * **Oprava chybného sekvenčního zpracování (Asynchronní zpracování požadavků):** V předchozím release docházelo k chybnému sekvenčnímu (blokujícímu) odbavování požadavků, což byla chyba. Zpracování uživatelských požadavků je nyní upraveno na asynchronní model, což zajišťuje správný a plynulý souběh operací bez zbytečného blokování.
-* **Co zůstává stejné (N/A / Nedotčené oblasti):**
-  * Samotné zakládání nových rezervací (`Create reservation`) se nemění.
-  * Způsob ochrany proti kolizím v databázi (unikátní index nad `screening_id` a `seat_id`) zůstává netknutý.
-  * Uživatelské rozhraní ani externí notifikační služba se v této fázi nemění.
-* **Mapování testů (Test map):**
-  * Přidání nových testů pro ověření časových hranic (`TC-CR08-03`).
-  * Regresní spuštění původního schvalování (`approvePendingReservationConfirmsIt`).
-  * Test souběhu (*race condition*) a ověření asynchronního chování pro případný střet mezi spuštěným workerem a schvalováním ze strany administrátora.
+## C09 — Integration, CI and Release Record
+C08 Change Card and reviewed ACCEPT/NO_CHANGE/REJECT rationale: ACCEPT (schváleno v C08: zavedení 30minutového TTL pro PENDING_APPROVAL žádosti, proaktivní exspirace přes ExpirationManager a oprava asynchronního zpracování požadavků).
+Before and after commit/tag (identical if no-change): Before: 70931c8, After: [bude doplněno při implementaci]
+Affected claims/new AC and unchanged regression basis: Životní cyklus PENDING_APPROVAL. Nová AC: AC-01 (schválení před 30 min -> CONFIRMED), AC-02 (pokus o schválení po 30 min -> EXPIRED), AC-03 (chování na časové hranici). Regresní základ: BR-02 (zákaz překryvu potvrzených rezervací).
+Changed code/data/config/ADR and justified N/A: Časový guard v ApprovalWorkflow.approve(), rozšíření ExpirationManager (@Scheduled), oprava asynchronního neblokujícího zpracování požadavků. N/A: Uživatelské rozhraní a notifikační služba se nemění.
+Peer review: reviewer, challenged assumption, disposition: [nevyplněno / neproběhlo]
+| Test ID | Independent accepted oracle | Exact command/data | Expected | Actual | PASS/FAIL/BLOCKED | Evidence |
+|---|---|---|---|---|---|---|
+| New behavior | TC-CR08-03 (Boundary TTL) | mvn test | Odmítnutí schválení po 30 min | [tbd] | [tbd] | [tbd] |
+| C08 regression TC-01 | approvePendingReservationConfirmsIt | mvn test | Schválení před uplynutím limitu | [tbd] | [tbd] | [tbd] |
+| C08 regression TC-02 | confirmRejectsSeatTakenByAnotherConfirmedReservation | mvn test | Zákaz překryvu sedadel dle BR-02 | [tbd] | [tbd] | [tbd] |
+Actual integration boundary and committed-state check: Lokální H2 souborová databáze (./data/cinema-reservation), schéma spravované přes Hibernate (ddl-auto=update).
+Dependency lock, runtime, DB schema, nonsecret config: Java 21, Spring Boot, Maven, H2 databáze, bez citlivých údajů v kódu.
+Clean checkout/build/test/run commands and environment: mvn clean test, mvn spring-boot:run (lokální prostředí).
+CI job or local automated script and actual log: [bude doplněno]
+Independent reproducer, exact steps and outcome: [bude doplněno]
+Artifact identity/file/hash/tag and migration assumptions: Souborová H2 databáze (./data/cinema-reservation), politika pro existující staré záznamy PENDING_APPROVAL bez explicitního expiresAt.
+Rollback/recovery limitation, residual risks: Přechod do stavu EXPIRED a exspirace dat v perzistentním úložišti jsou nevratné; případný rollback kódu automaticky nevrátí stav dat v databázi.
+Release decision READY/CONDITIONAL/HOLD, owner, rationale: CONDITIONAL, Rationale: Definice změn a analýza dopadů pro C09 jsou připraveny, čeká na provedení a ověření.
