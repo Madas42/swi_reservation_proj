@@ -135,8 +135,6 @@ N/A
 
 
 
-
-
 ## C09 / Krok 0 — Převzetí rozhodnutí z C08
 
 * **Odkaz na rozhodnutí:** Schválená změnová karta (`CR-08`) v souboru `docs/intent-and-change.md`, kde bylo pro staré nevyřízené žádosti (`PENDING_APPROVAL`) schváleno řešení **`ACCEPT`** (zavedení časového limitu / TTL – zrušení nebo exspirace po 30 minutách).
@@ -152,13 +150,14 @@ N/A
 ## C09 / Krok 1 — Vymezení nejmenší skutečné změny (Delta)
 
 * **Co se mění v kódu a logice (Changes):**
-  * **Časový guard:** Přidání kontroly stáří rezervace do metody `ApprovalWorkflow.approve()` (porovnání času vytvoření `createdAt` s konfigurovatelným TTL).
+  * **Časový guard:** Přidání kontroly stáří rezervace do metody `ApprovalWorkflow.approve()` (porovnání času vytvoření `createdAt` s konfigurovatelným TTL a injektovatelným `Clock`).
   * **Proaktivní exspirace:** Rozšíření stávajícího plánovače (`ExpirationManager` se `@Scheduled` spouštěním) o zpracování stavu `PENDING_APPROVAL`, aby se staré nevyřízené žádosti automaticky měnily na `EXPIRED`.
+  * **Oprava chybného sekvenčního zpracování (Asynchronní zpracování požadavků):** V předchozím release docházelo k chybnému sekvenčnímu (blokujícímu) odbavování požadavků, což byla chyba. Zpracování uživatelských požadavků je nyní upraveno na asynchronní model, což zajišťuje správný a plynulý souběh operací bez zbytečného blokování.
 * **Co zůstává stejné (N/A / Nedotčené oblasti):**
   * Samotné zakládání nových rezervací (`Create reservation`) se nemění.
   * Způsob ochrany proti kolizím v databázi (unikátní index nad `screening_id` a `seat_id`) zůstává netknutý.
   * Uživatelské rozhraní ani externí notifikační služba se v této fázi nemění.
 * **Mapování testů (Test map):**
-  * Přidání nových testů pro ověření časových hranic.
+  * Přidání nových testů pro ověření časových hranic (`TC-CR08-03`).
   * Regresní spuštění původního schvalování (`approvePendingReservationConfirmsIt`).
-  * Test souběhu (*race condition*) pro případný střet mezi spuštěným workerem a schvalováním ze strany administrátora.
+  * Test souběhu (*race condition*) a ověření asynchronního chování pro případný střet mezi spuštěným workerem a schvalováním ze strany administrátora.
