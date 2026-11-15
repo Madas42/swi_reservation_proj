@@ -1,3 +1,4 @@
-com/cinema/reservation/ReservationPersistenceTest.class
 com/cinema/reservation/ReservationLifecycleTest.class
 com/cinema/reservation/ReservationLifecycleTest$TestData.class
+com/cinema/reservation/ReservationPersistenceTest.class
+com/cinema/reservation/ReservationLifecycleTest$RaceResult.class
