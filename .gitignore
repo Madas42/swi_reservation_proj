@@ -1,3 +1,5 @@
 .idea/
 data/
 AGENTS.md
+target/
+.DS_Store

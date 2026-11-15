@@ -174,7 +174,9 @@ Java 17 (source/target), Spring Boot, Maven, H2 databáze, bez citlivých údaj�
 `mvn clean test`, `mvn spring-boot:run` (lokální prostředí).
 
 **CI job or local automated script and actual log:** 
-Lokální automatizovaný skript `mvn clean test` (Apache Maven 3.10.0, OpenJDK 27.0.1.0.3/Homebrew — zdrojový kód projektu cílí Java 17, H2 souborová databáze `./data/cinema-reservation`, macOS 15, aarch64). Skutečný log z finálního běhu (2026-11-15):
+Primární automatizace (od commitu `3b404d3`): GitHub Actions workflow `.github/workflows/ci.yml` — "CI — build & tests", triggery push a pull_request, job `build-and-test` na ubuntu-latest (actions/checkout@v4, actions/setup-java@v4 s Temurin JDK 17), krok "Build and test": `mvn --batch-mode clean test`. První běh: https://github.com/Madas42/swi_reservation_proj/actions/runs/43756730087 (run #1, event push) na commitu `3b404d3bd0e9ce0d606b5c36fb90affaf355a6ed` — výsledek: success, všechny kroky zelené; krok "Build and test" proběhl s exit kódem 0 (Maven končí nenulovým kódem při jakékoli selhavší testu). Testový souhr tohoto commitu: Tests run: 28, Failures: 0, Errors: 0 (ReservationLifecycleTest: 27, ReservationPersistenceTest: 1); kompletní log je dostupný na URL běhu. Před tímto commitem projekt neměl žádné CI — jedinou automatizací bylo lokální `mvn clean test` (akceptované omezení v době prvního release recordu).
+
+Lokální automatizovaný skript `mvn clean test` (Apache Maven 3.10.0, OpenJDK 27.0.1.0.3/Homebrew — zdrojový kód projektu cílí Java 17, H2 souborová databáze `./data/cinema-reservation`, macOS 15, aarch64). Skutečný log z finálního běhu (2026-11-15), exit code: 0:
 
 ```
 [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0 -- in com.cinema.reservation.ReservationPersistenceTest
