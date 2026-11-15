@@ -141,7 +141,7 @@ N/A
 ACCEPT (schváleno v C08: zavedení 30minutového TTL pro PENDING_APPROVAL žádosti, proaktivní exspirace přes ExpirationManager a oprava asynchronního zpracování požadavků).
 
 **Before and after commit/tag (identical if no-change):** 
-Before: `70931c8`, After: [bude doplněno při implementaci]
+Before: `70931c8`, After: `2a3b37d4c661f5b9f49bd8c1108a0cbf697e66ac` (implementační commit CR-08: "CR-08: 30-minute approval TTL for PENDING_APPROVAL (guard + ExpirationManager extension + optimistic locking)")
 
 **Affected claims/new AC and unchanged regression basis:** 
 Životní cyklus PENDING_APPROVAL. Nová AC: AC-01 (schválení před 30 min -> CONFIRMED), AC-02 (pokus o schválení po 30 min -> EXPIRED), AC-03 (chování na časové hranici). Regresní základ: BR-02 (zákaz překryvu potvrzených rezervací).
@@ -154,9 +154,14 @@ Before: `70931c8`, After: [bude doplněno při implementaci]
 
 | Test ID | Independent accepted oracle | Exact command/data | Expected | Actual | PASS/FAIL/BLOCKED | Evidence |
 |---|---|---|---|---|---|---|
-| New behavior | TC-CR08-03 (Boundary TTL) | mvn test | Odmítnutí schválení po 30 min | [tbd] | [tbd] | [tbd] |
-| C08 regression TC-01 | approvePendingReservationConfirmsIt | mvn test | Schválení před uplynutím limitu | [tbd] | [tbd] | [tbd] |
-| C08 regression TC-02 | confirmRejectsSeatTakenByAnotherConfirmedReservation | mvn test | Zákaz překryvu sedadel dle BR-02 | [tbd] | [tbd] | [tbd] |
+| New behavior | TC-CR08-03 (Boundary TTL) | `mvn test` — `approveJustBeforeDeadlineConfirmsReservation` (29:59), `approveAtExactDeadlineExpiresReservation` (30:00), `approveJustAfterDeadlineExpiresReservation` (30:01) | Odmítnutí schválení po 30 min; na hranici (now >= expiresAt) EXPIRED, těsně před hranicí CONFIRMED | Těsně před hranicí CONFIRMED se zachovanými sedadly; na hranici i po ní EXPIRED s uvolněnými sedadly | PASS | `mvn clean test`: Tests run: 27, Failures: 0, Errors: 0; `target/surefire-reports/com.cinema.reservation.ReservationLifecycleTest.txt` |
+| C08 regression TC-01 | approvePendingReservationConfirmsIt | `mvn test` | Schválení před uplynutím limitu | success=true, stav CONFIRMED, sedadla alokována | PASS | `mvn clean test`: Tests run: 27, Failures: 0, Errors: 0; `target/surefire-reports/com.cinema.reservation.ReservationLifecycleTest.txt` |
+| C08 regression TC-02 | confirmRejectsSeatTakenByAnotherConfirmedReservation | `mvn test` | Zákaz překryvu sedadel dle BR-02 | Druhé potvrzení odmítnuto, rezervace zůstala DRAFT bez alokace | PASS | `mvn clean test`: Tests run: 27, Failures: 0, Errors: 0; `target/surefire-reports/com.cinema.reservation.ReservationLifecycleTest.txt` |
+| New behavior AC-02 | approveAfterDeadlineExpiresReservationAndReleasesSeats | `mvn test` | Po deadline: nikdy CONFIRMED; EXPIRED + uvolněná sedadla | success=false, stav EXPIRED, `reserved_seat` řádky smazány | PASS | `mvn clean test`: Tests run: 27, Failures: 0, Errors: 0; `target/surefire-reports/com.cinema.reservation.ReservationLifecycleTest.txt` |
+| New behavior (worker) | backgroundJobExpiresStalePendingApproval | `mvn test` | Sweep ExpirationManageru expiruje PENDING_APPROVAL po deadline a uvolní sedadla | Stav EXPIRED, sedadla uvolněna | PASS | `mvn clean test`: Tests run: 27, Failures: 0, Errors: 0; `target/surefire-reports/com.cinema.reservation.ReservationLifecycleTest.txt` |
+| New behavior (legacy) | backgroundJobAssignsDeadlineToLegacyPendingApprovalRowAndExpiresIt | `mvn test` | Řádky PENDING_APPROVAL s expiresAt == null dostanou při prvním sweep deadline createdAt + 30 min a expirují | Deadline přiřazen z createdAt, stav EXPIRED, sedadla uvolněna | PASS | `mvn clean test`: Tests run: 27, Failures: 0, Errors: 0; `target/surefire-reports/com.cinema.reservation.ReservationLifecycleTest.txt` |
+| New behavior (race) | approveAndExpirationWorkerRaceNeverLeavesInconsistentState | `mvn test` | Souběh approve vs. worker: vždy konzistentní stav, nikdy CONFIRMED po deadline, žádná dvojitá alokace | Approve-first -> CONFIRMED (přesně 12 alokací), worker-first -> EXPIRED (0 držených sedadel) | PASS | `mvn clean test`: Tests run: 27, Failures: 0, Errors: 0; `target/surefire-reports/com.cinema.reservation.ReservationLifecycleTest.txt` |
+| New behavior AC-04 | seatsCanBeRebookedAfterPendingApprovalExpiry | `mvn test` | Po expiraci pending rezervace lze její sedadla znovu zarezervovat; BR-02 zachováno | Druhý zákazník úspěšně CONFIRMED na uvolněném sedadle (jediná alokace) | PASS | `mvn clean test`: Tests run: 27, Failures: 0, Errors: 0; `target/surefire-reports/com.cinema.reservation.ReservationLifecycleTest.txt` |
 
 **Actual integration boundary and committed-state check:** 
 Lokální H2 souborová databáze (`./data/cinema-reservation`), schéma spravované přes Hibernate (`ddl-auto=update`).
@@ -168,17 +173,26 @@ Java 21, Spring Boot, Maven, H2 databáze, bez citlivých údajů v kódu.
 `mvn clean test`, `mvn spring-boot:run` (lokální prostředí).
 
 **CI job or local automated script and actual log:** 
-[bude doplněno]
+Lokální automatizovaný skript `mvn clean test` (Apache Maven 3.10.0, OpenJDK 27.0.1.0.3/Homebrew — zdrojový kód projektu cílí Java 17, H2 souborová databáze `./data/cinema-reservation`, macOS 15, aarch64). Skutečný log z finálního běhu (2026-11-15):
+
+```
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0 -- in com.cinema.reservation.ReservationPersistenceTest
+[INFO] Tests run: 26, Failures: 0, Errors: 0, Skipped: 0 -- in com.cinema.reservation.ReservationLifecycleTest
+[INFO] Tests run: 27, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
 
 **Independent reproducer, exact steps and outcome:** 
-[bude doplněno]
+1. Clean checkout repozitáře na commitu `2a3b37d4c661f5b9f49bd8c1108a0cbf697e66ac`.
+2. `mvn clean test` — všechny CR-08 testy procházejí: `approvePendingReservationConfirmsIt` (AC-01), `approveAfterDeadlineExpiresReservationAndReleasesSeats` (AC-02), `approveJustBeforeDeadlineConfirmsReservation` / `approveAtExactDeadlineExpiresReservation` / `approveJustAfterDeadlineExpiresReservation` (AC-03), `confirmRejectsSeatTakenByAnotherConfirmedReservation` + `pendingApprovalSeatsBlockOtherReservations` + `seatsCanBeRebookedAfterPendingApprovalExpiry` (AC-04), `backgroundJobExpiresStalePendingApproval`, `backgroundJobAssignsDeadlineToLegacyPendingApprovalRowAndExpiresIt`, `approveAndExpirationWorkerRaceNeverLeavesInconsistentState`. Výsledek: Tests run: 27, Failures: 0, Errors: 0, BUILD SUCCESS.
+3. Manuální krok: `mvn spring-boot:run` → vytvořit rezervaci s více než 10 sedadly → confirm (stav PENDING_APPROVAL, sedadla držena) → nechat uplynout 30 minut (nebo počkat na sweep workeru, běží každých 60 s) → pokus o approve v admin panelu: rezervace přejde do EXPIRED, sedadla se uvolní a lze je znovu zarezervovat; approve před uplynutím limitu proběhne normálně (CONFIRMED).
 
 **Artifact identity/file/hash/tag and migration assumptions:** 
-Souborová H2 databáze (`./data/cinema-reservation`), politika pro existující staré záznamy PENDING_APPROVAL bez explicitního `expiresAt`.
+Implementační commit: `2a3b37d4c661f5b9f49bd8c1108a0cbf697e66ac` (main). Souborová H2 databáze (`./data/cinema-reservation`), schéma spravované Hibernate `ddl-auto=update`. Migrace: nový sloupec `version` (BIGINT, nullable) na tabulce `reservation` přidaný anotací `@Version` — automaticky doplněn při startu aplikace, existující řádky mají NULL a Hibernate je při první aktualizaci inicializuje. Politika pro existující staré záznamy PENDING_APPROVAL bez explicitního `expiresAt`: při prvním sweep dostanou deadline `createdAt + 30 min` (PENDING_APPROVAL_TTL_MINUTES) a pokud už uplynul (staré záznamy), expirují ve stejném běhu — staré nerozhodnuté žádosti se nikdy později nestanou platnými rezervacemi.
 
 **Rollback/recovery limitation, residual risks:** 
-Přechod do stavu `EXPIRED` a exspirace dat v perzistentním úložišti jsou nevratné; případný rollback kódu automaticky nevrátí stav dat v databázi.
+Přechod do stavu `EXPIRED` a exspirace dat v perzistentním úložišti jsou nevratné; případný rollback kódu automaticky nevrátí stav dat v databázi. Reziduální riziko: při souběhu admin approve a běžícího workeru může dojít ke konfliktu optimistického zámku (`ObjectOptimisticLockingFailureException`) — admin vidí "The reservation was just modified by another process, please retry." a musí akci zopakovat; sweep se opakuje při dalším běhu (60 s).
 
 **Release decision READY/CONDITIONAL/HOLD, owner, rationale:** 
-`CONDITIONAL`, Rationale: Definice změn a analýza dopadů pro C09 jsou připraveny, čeká na provedení a ověření.
+`READY`, Owner: Tým C08, Datum: 15.11.2026, Rationale: `mvn clean test` plně zelený (Tests run: 27, Failures: 0, Errors: 0, BUILD SUCCESS); všechna akceptační kritéria AC-01..AC-04 ověřena automatizovanými testy včetně hraničních případů, legacy záznamů a souběhu approve/worker.
 
