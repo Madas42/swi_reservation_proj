@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -34,6 +35,8 @@ class ReservationLifecycleTest {
     private ReservationRepository reservationRepository;
     @Autowired
     private ReservedSeatRepository reservedSeatRepository;
+    @Autowired
+    private SeatAvailability seatAvailability;
     @Autowired
     private ReservationManagement reservationManagement;
     @Autowired
@@ -382,6 +385,160 @@ class ReservationLifecycleTest {
                 .send(any(), any(), any());
     }
 
+    @Test
+    @Transactional
+    void approveAfterDeadlineExpiresReservationAndReleasesSeats() {
+        TestData data = largeTestData(LocalDateTime.now().plusHours(2));
+        Reservation pending = pendingApprovalWithAllocatedSeats(data,
+                "late-approval@example.com", LocalDateTime.now().minusMinutes(1));
+
+        ReservationManagement.Outcome outcome = approvalWorkflow.approve(pending.getId());
+
+        assertThat(outcome.success()).isFalse();
+        assertThat(reservationRepository.findById(pending.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(reservedSeatRepository.findByReservation_Id(pending.getId())).isEmpty();
+    }
+
+    @Test
+    @Transactional
+    void approveJustBeforeDeadlineConfirmsReservation() {
+        TestData data = largeTestData(LocalDateTime.now().plusHours(2));
+        Reservation pending = pendingApprovalWithAllocatedSeats(data,
+                "boundary-before@example.com", LocalDateTime.now().plusSeconds(59));
+
+        ReservationManagement.Outcome outcome = approvalWorkflow.approve(pending.getId());
+
+        assertThat(outcome.success()).isTrue();
+        assertThat(reservationRepository.findById(pending.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReservationStatus.CONFIRMED);
+        assertThat(reservedSeatRepository.findByReservation_Id(pending.getId())).isNotEmpty();
+    }
+
+    @Test
+    @Transactional
+    void approveAtExactDeadlineExpiresReservation() {
+        TestData data = largeTestData(LocalDateTime.now().plusHours(2));
+        Reservation pending = pendingApprovalWithAllocatedSeats(data,
+                "boundary-exact@example.com", LocalDateTime.now());
+
+        ReservationManagement.Outcome outcome = approvalWorkflow.approve(pending.getId());
+
+        assertThat(outcome.success()).isFalse();
+        assertThat(reservationRepository.findById(pending.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(reservedSeatRepository.findByReservation_Id(pending.getId())).isEmpty();
+    }
+
+    @Test
+    @Transactional
+    void approveJustAfterDeadlineExpiresReservation() {
+        TestData data = largeTestData(LocalDateTime.now().plusHours(2));
+        Reservation pending = pendingApprovalWithAllocatedSeats(data,
+                "boundary-after@example.com", LocalDateTime.now().minusSeconds(1));
+
+        ReservationManagement.Outcome outcome = approvalWorkflow.approve(pending.getId());
+
+        assertThat(outcome.success()).isFalse();
+        assertThat(reservationRepository.findById(pending.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(reservedSeatRepository.findByReservation_Id(pending.getId())).isEmpty();
+    }
+
+    @Test
+    @Transactional
+    void seatsCanBeRebookedAfterPendingApprovalExpiry() {
+        TestData data = largeTestData(LocalDateTime.now().plusHours(2));
+        Reservation pending = pendingApprovalWithAllocatedSeats(data,
+                "expired-pending@example.com", LocalDateTime.now().minusMinutes(1));
+        assertThat(approvalWorkflow.approve(pending.getId()).success()).isFalse();
+
+        Reservation second = reservationManagement.createDraft(
+                data.screening().getId(),
+                List.of(data.seats().get(0).getId()),
+                "Rebook Customer", "rebook-pending@example.com");
+        ReservationManagement.Outcome outcome = reservationManagement.confirm(second.getId());
+
+        assertThat(outcome.success()).isTrue();
+        assertThat(reservationRepository.findById(second.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReservationStatus.CONFIRMED);
+        assertThat(reservedSeatRepository.findByReservation_Screening_IdAndReservation_Status(
+                data.screening().getId(), ReservationStatus.CONFIRMED))
+                .extracting(reservedSeat -> reservedSeat.getSeat().getId())
+                .containsExactly(data.seats().get(0).getId());
+    }
+
+    @Test
+    @Transactional
+    void backgroundJobExpiresStalePendingApproval() {
+        TestData data = largeTestData(LocalDateTime.now().plusHours(2));
+        Reservation pending = pendingApprovalWithAllocatedSeats(data,
+                "stale-pending@example.com", LocalDateTime.now().minusMinutes(1));
+
+        expirationManager.expireStaleDrafts();
+
+        assertThat(reservationRepository.findById(pending.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(reservedSeatRepository.findByReservation_Id(pending.getId())).isEmpty();
+    }
+
+    @Test
+    @Transactional
+    void backgroundJobAssignsDeadlineToLegacyPendingApprovalRowAndExpiresIt() {
+        TestData data = largeTestData(LocalDateTime.now().plusHours(2));
+        Customer customer = customerRepository.save(new Customer("Legacy Customer", "legacy@example.com"));
+        Reservation legacy = new Reservation(
+                customer, data.screening(), ReservationStatus.PENDING_APPROVAL);
+        ReflectionTestUtils.setField(legacy, "createdAt", LocalDateTime.now().minusMinutes(45));
+        reservationRepository.save(legacy);
+        assertThat(seatAvailability.allocateIfAvailable(
+                legacy, data.seats().stream().map(Seat::getId).toList())).isTrue();
+
+        expirationManager.expireStaleDrafts();
+
+        Reservation loaded = reservationRepository.findById(legacy.getId()).orElseThrow();
+        assertThat(loaded.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(loaded.getExpiresAt()).isEqualTo(
+                loaded.getCreatedAt().plusMinutes(ReservationManagement.PENDING_APPROVAL_TTL_MINUTES));
+        assertThat(reservedSeatRepository.findByReservation_Id(legacy.getId())).isEmpty();
+    }
+
+    @Test
+    @Transactional
+    void approveAndExpirationWorkerRaceNeverLeavesInconsistentState() {
+        // Interleaving A: approve wins while the reservation is still inside its
+        // approval window; the worker sweep afterwards finds nothing to expire.
+        TestData dataA = largeTestData(LocalDateTime.now().plusHours(2));
+        Reservation valid = pendingApprovalWithAllocatedSeats(dataA,
+                "race-approve@example.com", LocalDateTime.now().plusMinutes(5));
+        ReservationManagement.Outcome approveFirst = approvalWorkflow.approve(valid.getId());
+        expirationManager.expireStaleDrafts();
+
+        assertThat(approveFirst.success()).isTrue();
+        assertThat(reservationRepository.findById(valid.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReservationStatus.CONFIRMED);
+        assertThat(reservedSeatRepository.findByReservation_Id(valid.getId()))
+                .hasSize(dataA.seats().size());
+
+        // Interleaving B: the worker expires the row first; the approve attempt
+        // afterwards fails the PENDING_APPROVAL status check.
+        TestData dataB = largeTestData(LocalDateTime.now().plusHours(2));
+        Reservation stale = pendingApprovalWithAllocatedSeats(dataB,
+                "race-worker@example.com", LocalDateTime.now().minusMinutes(1));
+        expirationManager.expireStaleDrafts();
+        ReservationManagement.Outcome approveSecond = approvalWorkflow.approve(stale.getId());
+
+        assertThat(approveSecond.success()).isFalse();
+        assertThat(reservationRepository.findById(stale.getId()).orElseThrow().getStatus())
+                .isEqualTo(ReservationStatus.EXPIRED);
+        assertThat(reservedSeatRepository.findByReservation_Id(stale.getId())).isEmpty();
+        assertThat(reservedSeatRepository
+                .findByReservation_Screening_IdAndReservation_StatusIn(
+                        dataB.screening().getId(),
+                        List.of(ReservationStatus.CONFIRMED, ReservationStatus.PENDING_APPROVAL)))
+                .isEmpty();
+    }
+
     private TestData testData(LocalDateTime screeningStart) {
         Film film = filmRepository.save(new Film("Lifecycle Film", "Test", 90));
         CinemaRoom room = cinemaRoomRepository.save(new CinemaRoom("Lifecycle Room", 1, 3));
@@ -404,6 +561,22 @@ class ReservationLifecycleTest {
                         .mapToObj(number -> new Seat(room, row, number)))
                 .toList());
         return new TestData(screening, seats);
+    }
+
+    /**
+     * Time-controlled PENDING_APPROVAL fixture: a reservation directly in
+     * PENDING_APPROVAL with the given approval deadline and all of the
+     * screening's seats already allocated, mirroring what confirm() leaves
+     * behind for a large reservation.
+     */
+    private Reservation pendingApprovalWithAllocatedSeats(TestData data, String email,
+                                                           LocalDateTime expiresAt) {
+        Customer customer = customerRepository.save(new Customer("Pending Customer", email));
+        Reservation pending = reservationRepository.save(new Reservation(
+                customer, data.screening(), ReservationStatus.PENDING_APPROVAL, expiresAt));
+        assertThat(seatAvailability.allocateIfAvailable(
+                pending, data.seats().stream().map(Seat::getId).toList())).isTrue();
+        return pending;
     }
 
     private record TestData(Screening screening, List<Seat> seats) {

@@ -3,6 +3,8 @@ package com.cinema.reservation;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 /**
  * Approval Workflow owns the deferred approval state (OP-05, reservations
  * with more than 10 seats): it is the only component that decides and
@@ -35,6 +37,13 @@ public class ApprovalWorkflow {
         if (reservation.getStatus() != ReservationStatus.PENDING_APPROVAL) {
             return new ReservationManagement.Outcome(reservation, false,
                     "Only reservations awaiting approval can be approved.");
+        }
+        if (reservation.isPendingApprovalExpired(LocalDateTime.now())) {
+            reservation.setStatus(ReservationStatus.EXPIRED);
+            seatAvailability.release(reservation.getId());
+            notificationIntegration.notifyOutcome(reservation, false);
+            return new ReservationManagement.Outcome(reservation, false,
+                    "The approval window of 30 minutes has passed; the reservation expired and the seats were released.");
         }
         reservation.setStatus(ReservationStatus.CONFIRMED);
         notificationIntegration.notifyOutcome(reservation, true);

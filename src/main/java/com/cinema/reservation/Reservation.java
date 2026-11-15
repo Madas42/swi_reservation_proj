@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Version;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -26,6 +27,8 @@ public class Reservation {
     private Screening screening;
     @Enumerated(EnumType.STRING)
     private ReservationStatus status;
+    @Version
+    private Long version;
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;
     private String requestedSeatIds;
@@ -48,6 +51,10 @@ public class Reservation {
 
     public Long getId() {
         return id;
+    }
+
+    public Long getVersion() {
+        return version;
     }
 
     public Customer getCustomer() {
@@ -89,8 +96,18 @@ public class Reservation {
         this.status = status;
     }
 
+    public void setExpiresAt(LocalDateTime expiresAt) {
+        this.expiresAt = expiresAt;
+    }
+
     public boolean isDraftExpired(LocalDateTime now) {
         return status == ReservationStatus.DRAFT
+                && expiresAt != null
+                && !now.isBefore(expiresAt);
+    }
+
+    public boolean isPendingApprovalExpired(LocalDateTime now) {
+        return status == ReservationStatus.PENDING_APPROVAL
                 && expiresAt != null
                 && !now.isBefore(expiresAt);
     }

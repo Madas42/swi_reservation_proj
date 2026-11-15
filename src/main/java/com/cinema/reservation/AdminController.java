@@ -1,6 +1,7 @@
 package com.cinema.reservation;
 
 import jakarta.servlet.http.HttpSession;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -92,8 +93,13 @@ public class AdminController {
         if (!isLoggedIn(session)) {
             return "redirect:/";
         }
-        ReservationManagement.Outcome outcome = approvalWorkflow.approve(reservationId);
-        flash(redirectAttributes, outcome);
+        try {
+            ReservationManagement.Outcome outcome = approvalWorkflow.approve(reservationId);
+            flash(redirectAttributes, outcome);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            redirectAttributes.addFlashAttribute("adminError",
+                    "The reservation was just modified by another process, please retry.");
+        }
         return "redirect:/admin";
     }
 

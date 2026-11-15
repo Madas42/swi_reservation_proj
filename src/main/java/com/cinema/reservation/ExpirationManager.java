@@ -2,6 +2,7 @@ package com.cinema.reservation;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -24,9 +25,23 @@ public class ExpirationManager {
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 60_000)
     public void expireStaleDrafts() {
-        int expired = reservationManagement.expireStaleDrafts();
-        if (expired > 0) {
-            log.info("Expired {} stale draft reservation(s).", expired);
+        try {
+            int expired = reservationManagement.expireStaleDrafts();
+            if (expired > 0) {
+                log.info("Expired {} stale draft reservation(s).", expired);
+            }
+        } catch (OptimisticLockingFailureException e) {
+            log.warn("Draft expiration sweep hit a concurrently modified reservation"
+                    + " and was rolled back; it will be retried on the next run.", e);
+        }
+        try {
+            int expiredPending = reservationManagement.expireStalePendingApprovals();
+            if (expiredPending > 0) {
+                log.info("Expired {} stale pending approval reservation(s).", expiredPending);
+            }
+        } catch (OptimisticLockingFailureException e) {
+            log.warn("Pending approval expiration sweep hit a concurrently modified reservation"
+                    + " and was rolled back; it will be retried on the next run.", e);
         }
     }
 }

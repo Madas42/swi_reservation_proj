@@ -19,6 +19,7 @@ import java.util.List;
 @Service
 public class ReservationManagement {
     static final long DRAFT_TTL_MINUTES = 15;
+    static final long PENDING_APPROVAL_TTL_MINUTES = 30;
     static final long CANCEL_DEADLINE_MINUTES = 30;
     static final long LARGE_RESERVATION_SEATS = 10;
 
@@ -113,6 +114,7 @@ public class ReservationManagement {
         }
         if (requestedSeatIds.size() > LARGE_RESERVATION_SEATS) {
             reservation.setStatus(ReservationStatus.PENDING_APPROVAL);
+            reservation.setExpiresAt(now.plusMinutes(PENDING_APPROVAL_TTL_MINUTES));
             return new Outcome(reservation, true,
                     "Your reservation has more than " + LARGE_RESERVATION_SEATS
                             + " seats and is now awaiting admin approval.");
@@ -163,6 +165,33 @@ public class ReservationManagement {
             seatAvailability.release(reservation.getId());
         }
         return staleDrafts.size();
+    }
+
+    /**
+     * PENDING_APPROVAL -> EXPIRED transition for reservations whose approval
+     * window has passed; called by the Expiration Manager background job,
+     * releases the allocated seats. Legacy rows without an approval deadline
+     * (created before the approval TTL existed) get one assigned from
+     * createdAt on first contact, so old undecided requests expire on this
+     * or the next sweep instead of becoming valid bookings later.
+     *
+     * @return number of reservations expired by this run
+     */
+    @Transactional
+    public int expireStalePendingApprovals() {
+        List<Reservation> legacy = reservationRepository
+                .findByStatusAndExpiresAtIsNull(ReservationStatus.PENDING_APPROVAL);
+        for (Reservation reservation : legacy) {
+            reservation.setExpiresAt(reservation.getCreatedAt()
+                    .plusMinutes(PENDING_APPROVAL_TTL_MINUTES));
+        }
+        List<Reservation> stale = reservationRepository
+                .findByStatusAndExpiresAtBefore(ReservationStatus.PENDING_APPROVAL, LocalDateTime.now());
+        for (Reservation reservation : stale) {
+            reservation.setStatus(ReservationStatus.EXPIRED);
+            seatAvailability.release(reservation.getId());
+        }
+        return stale.size();
     }
 
     record Outcome(Reservation reservation, boolean success, String message) {
