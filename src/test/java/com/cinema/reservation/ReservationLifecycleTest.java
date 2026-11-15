@@ -9,12 +9,21 @@ import static org.mockito.Mockito.verify;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -537,6 +546,122 @@ class ReservationLifecycleTest {
                         dataB.screening().getId(),
                         List.of(ReservationStatus.CONFIRMED, ReservationStatus.PENDING_APPROVAL)))
                 .isEmpty();
+    }
+
+    /**
+     * True concurrency race (not @Transactional — fixtures are committed so
+     * both threads see them): admin approve and the expiration sweep run in
+     * parallel against the same reservation. Scenario A uses a future
+     * deadline (approve can legitimately win), scenario B a past deadline
+     * (both writers target the same stale row). The optimistic lock
+     * (@Version) guarantees exactly one writer wins; a conflict in the
+     * loser is caught and recorded, and the final state must always be
+     * consistent with the seat allocation.
+     */
+    @Test
+    void concurrentApproveAndWorkerSweepIsSafeUnderOptimisticLocking() throws Exception {
+        LocalDateTime start = LocalDateTime.now();
+
+        TestData dataA = largeTestData(LocalDateTime.now().plusHours(2));
+        Customer customerA = customerRepository.save(
+                new Customer("Concurrent A", "concurrent-a@example.com"));
+        Reservation future = reservationRepository.save(new Reservation(
+                customerA, dataA.screening(), ReservationStatus.PENDING_APPROVAL,
+                LocalDateTime.now().plusMinutes(5)));
+        reservedSeatRepository.saveAll(dataA.seats().stream()
+                .map(seat -> new ReservedSeat(future, seat)).toList());
+        try {
+            RaceResult resultA = runApproveAgainstSweep(future.getId());
+
+            Reservation loadedA = reservationRepository.findById(future.getId()).orElseThrow();
+            assertThat(loadedA.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+            assertThat(loadedA.getExpiresAt()).isAfter(start);
+            assertThat(reservedSeatRepository.findByReservation_Id(future.getId()))
+                    .hasSize(dataA.seats().size());
+            assertThat(resultA.approveSucceeded()).isTrue();
+        } finally {
+            cleanupCommittedRaceFixture(future.getId(), customerA.getId(), dataA);
+        }
+
+        TestData dataB = largeTestData(LocalDateTime.now().plusHours(2));
+        Customer customerB = customerRepository.save(
+                new Customer("Concurrent B", "concurrent-b@example.com"));
+        Reservation stale = reservationRepository.save(new Reservation(
+                customerB, dataB.screening(), ReservationStatus.PENDING_APPROVAL,
+                LocalDateTime.now().minusMinutes(1)));
+        reservedSeatRepository.saveAll(dataB.seats().stream()
+                .map(seat -> new ReservedSeat(stale, seat)).toList());
+        try {
+            RaceResult resultB = runApproveAgainstSweep(stale.getId());
+
+            Reservation loadedB = reservationRepository.findById(stale.getId()).orElseThrow();
+            assertThat(loadedB.getStatus()).isEqualTo(ReservationStatus.EXPIRED);
+            assertThat(reservedSeatRepository.findByReservation_Id(stale.getId())).isEmpty();
+            assertThat(resultB.approveSucceeded()).isFalse();
+        } finally {
+            cleanupCommittedRaceFixture(stale.getId(), customerB.getId(), dataB);
+        }
+    }
+
+    /**
+     * Runs approve() and the pending-approval sweep in two threads that
+     * start together at a barrier. An optimistic-lock conflict in either
+     * thread is caught and recorded (it proves the locking works); any
+     * other failure fails the test.
+     */
+    private RaceResult runApproveAgainstSweep(Long reservationId) throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CyclicBarrier barrier = new CyclicBarrier(2);
+        AtomicBoolean optimisticLockConflict = new AtomicBoolean();
+        AtomicReference<ReservationManagement.Outcome> approveOutcome = new AtomicReference<>();
+        AtomicReference<Throwable> approveFailure = new AtomicReference<>();
+        AtomicReference<Throwable> sweepFailure = new AtomicReference<>();
+        try {
+            Future<?> approveFuture = executor.submit(() -> {
+                try {
+                    barrier.await(10, TimeUnit.SECONDS);
+                    approveOutcome.set(approvalWorkflow.approve(reservationId));
+                } catch (ObjectOptimisticLockingFailureException e) {
+                    optimisticLockConflict.set(true);
+                } catch (Throwable t) {
+                    approveFailure.set(t);
+                }
+            });
+            Future<?> sweepFuture = executor.submit(() -> {
+                try {
+                    barrier.await(10, TimeUnit.SECONDS);
+                    reservationManagement.expireStalePendingApprovals();
+                } catch (OptimisticLockingFailureException e) {
+                    optimisticLockConflict.set(true);
+                } catch (Throwable t) {
+                    sweepFailure.set(t);
+                }
+            });
+            approveFuture.get(30, TimeUnit.SECONDS);
+            sweepFuture.get(30, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdownNow();
+        }
+        assertThat(approveFailure.get()).as("approve thread failed unexpectedly").isNull();
+        assertThat(sweepFailure.get()).as("sweep thread failed unexpectedly").isNull();
+        return new RaceResult(
+                approveOutcome.get() != null && approveOutcome.get().success(),
+                optimisticLockConflict.get());
+    }
+
+    /** Deletes the committed fixture entities in FK-safe order. */
+    private void cleanupCommittedRaceFixture(Long reservationId, Long customerId, TestData data) {
+        reservedSeatRepository.deleteAll(
+                reservedSeatRepository.findByReservation_Id(reservationId));
+        reservationRepository.deleteById(reservationId);
+        customerRepository.deleteById(customerId);
+        screeningRepository.deleteById(data.screening().getId());
+        seatRepository.deleteAllById(data.seats().stream().map(Seat::getId).toList());
+        cinemaRoomRepository.deleteById(data.screening().getRoom().getId());
+        filmRepository.deleteById(data.screening().getFilm().getId());
+    }
+
+    private record RaceResult(boolean approveSucceeded, boolean optimisticLockConflict) {
     }
 
     private TestData testData(LocalDateTime screeningStart) {
