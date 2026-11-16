@@ -197,5 +197,5 @@ Not covered: race of two simultaneous confirms (DB unique constraint backs the c
 | --- | --- | --- | --- |
 | Successful confirmation | Reservation Confirmed and written to database. | Confirmed and notified by web app. | Logs show confirmed reservation, but are not especialy needed for this scenario. |
 | Conflict rejected | | | |
-| Technical failure and recovery | | | |
+| Technical failure and recovery | | App console logs.| |
 | Application restart | | | |

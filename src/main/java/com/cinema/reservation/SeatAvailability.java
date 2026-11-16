@@ -1,5 +1,7 @@
 package com.cinema.reservation;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class SeatAvailability {
+    private static final Logger log = LoggerFactory.getLogger(SeatAvailability.class);
+
     private static final List<ReservationStatus> HELD_STATUSES = List.of(
             ReservationStatus.CONFIRMED, ReservationStatus.PENDING_APPROVAL);
 
@@ -35,7 +39,9 @@ public class SeatAvailability {
      * (held by CONFIRMED and PENDING_APPROVAL reservations).
      */
     public Set<Long> checkAvailability(Long screeningId) {
-        return heldSeatIds(screeningId);
+        Set<Long> held = heldSeatIds(screeningId);
+        log.debug("[SEATS] Screening {} availability: {} seat(s) currently held", screeningId, held.size());
+        return held;
     }
 
     /** Number of seats held for the screening (for remaining capacity). */
@@ -66,17 +72,23 @@ public class SeatAvailability {
     @Transactional(propagation = Propagation.MANDATORY)
     public boolean allocateIfAvailable(Reservation reservation, List<Long> seatIds) {
         if (!areAvailable(reservation.getScreening().getId(), seatIds)) {
+            log.debug("[SEATS] Allocation for reservation {} screening {} rejected: "
+                    + "seats {} no longer available", reservation.getId(),
+                    reservation.getScreening().getId(), seatIds);
             return false;
         }
         reservedSeatRepository.saveAll(seatRepository.findAllById(seatIds)
                 .stream()
                 .map(seat -> new ReservedSeat(reservation, seat))
                 .toList());
+        log.debug("[SEATS] Allocated {} seat(s) {} to reservation {} for screening {}",
+                seatIds.size(), seatIds, reservation.getId(), reservation.getScreening().getId());
         return true;
     }
 
     /** Releases the seats allocated to a reservation (cancel/reject/expire). */
     public void release(Long reservationId) {
+        log.debug("[SEATS] Releasing seats allocated to reservation {}", reservationId);
         reservedSeatRepository.deleteAllByReservation_Id(reservationId);
     }
 

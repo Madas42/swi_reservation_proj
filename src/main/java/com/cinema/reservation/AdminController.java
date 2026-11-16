@@ -1,6 +1,8 @@
 package com.cinema.reservation;
 
 import jakarta.servlet.http.HttpSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -21,6 +23,8 @@ import java.util.List;
  */
 @Controller
 public class AdminController {
+    private static final Logger log = LoggerFactory.getLogger(AdminController.class);
+
     static final String SESSION_ATTRIBUTE = "adminLoggedIn";
     static final String ADMIN_USERNAME = "admin";
     static final String ADMIN_PASSWORD = "admin";
@@ -48,10 +52,13 @@ public class AdminController {
                         @RequestHeader(value = "Referer", required = false) String referer,
                         HttpSession session,
                         RedirectAttributes redirectAttributes) {
+        log.info("[HTTP] POST /admin/login (username={})", username);
         if (ADMIN_USERNAME.equals(username) && ADMIN_PASSWORD.equals(password)) {
             session.setAttribute(SESSION_ATTRIBUTE, Boolean.TRUE);
+            log.info("[HTTP] POST /admin/login -> admin logged in");
             return "redirect:/admin";
         }
+        log.warn("[HTTP] POST /admin/login -> invalid admin credentials");
         redirectAttributes.addFlashAttribute("adminError",
                 "Invalid admin credentials.");
         return "redirect:" + (referer != null ? referer : "/");
@@ -59,13 +66,17 @@ public class AdminController {
 
     @PostMapping("/admin/logout")
     public String logout(HttpSession session) {
+        log.info("[HTTP] POST /admin/logout");
         session.removeAttribute(SESSION_ATTRIBUTE);
+        log.info("[HTTP] POST /admin/logout -> admin logged out");
         return "redirect:/";
     }
 
     @GetMapping("/admin")
     public String adminPanel(HttpSession session, Model model) {
+        log.info("[HTTP] GET /admin (admin panel)");
         if (!isLoggedIn(session)) {
+            log.warn("[HTTP] GET /admin -> not logged in, redirecting to /");
             return "redirect:/";
         }
         List<PendingView> pending = reservationRepository
@@ -83,6 +94,8 @@ public class AdminController {
                                 .toList()))
                 .toList();
         model.addAttribute("pendingReservations", pending);
+        log.info("[HTTP] GET /admin -> rendered admin panel with {} pending approval reservation(s)",
+                pending.size());
         return "admin";
     }
 
@@ -90,13 +103,20 @@ public class AdminController {
     public String approve(@PathVariable Long reservationId,
                           HttpSession session,
                           RedirectAttributes redirectAttributes) {
+        log.info("[HTTP] POST /admin/reservations/{}/approve", reservationId);
         if (!isLoggedIn(session)) {
+            log.warn("[HTTP] POST /admin/reservations/{}/approve -> not logged in, redirecting to /",
+                    reservationId);
             return "redirect:/";
         }
         try {
             ReservationManagement.Outcome outcome = approvalWorkflow.approve(reservationId);
+            log.info("[HTTP] POST /admin/reservations/{}/approve -> success={}, message={}",
+                    reservationId, outcome.success(), outcome.message());
             flash(redirectAttributes, outcome);
         } catch (ObjectOptimisticLockingFailureException e) {
+            log.error("[HTTP] POST /admin/reservations/{}/approve -> concurrent modification: {}",
+                    reservationId, e.getMessage());
             redirectAttributes.addFlashAttribute("adminError",
                     "The reservation was just modified by another process, please retry.");
         }
@@ -107,10 +127,15 @@ public class AdminController {
     public String reject(@PathVariable Long reservationId,
                          HttpSession session,
                          RedirectAttributes redirectAttributes) {
+        log.info("[HTTP] POST /admin/reservations/{}/reject", reservationId);
         if (!isLoggedIn(session)) {
+            log.warn("[HTTP] POST /admin/reservations/{}/reject -> not logged in, redirecting to /",
+                    reservationId);
             return "redirect:/";
         }
         ReservationManagement.Outcome outcome = approvalWorkflow.reject(reservationId);
+        log.info("[HTTP] POST /admin/reservations/{}/reject -> success={}, message={}",
+                reservationId, outcome.success(), outcome.message());
         flash(redirectAttributes, outcome);
         return "redirect:/admin";
     }

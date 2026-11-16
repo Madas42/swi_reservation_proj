@@ -16,6 +16,6 @@ public class LoggingNotificationClient implements NotificationClient {
 
     @Override
     public void send(String recipientEmail, String subject, String body) {
-        log.info("Simulated notification to {}: [{}] {}", recipientEmail, subject, body);
+        log.info("[NOTIFY] Simulated notification to {}: [{}] {}", recipientEmail, subject, body);
     }
 }

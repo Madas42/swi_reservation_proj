@@ -1,5 +1,7 @@
 package com.cinema.reservation;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +20,8 @@ import java.util.Set;
 
 @Controller
 public class ScreeningController {
+    private static final Logger log = LoggerFactory.getLogger(ScreeningController.class);
+
     private final ScreeningRepository screeningRepository;
     private final SeatRepository seatRepository;
     private final ReservationRepository reservationRepository;
@@ -39,6 +43,7 @@ public class ScreeningController {
 
     @GetMapping("/")
     public String screenings(@RequestParam(required = false) String date, Model model) {
+        log.info("[HTTP] GET / (date={})", date);
         LocalDate selectedDate = parseDateOrDefault(date);
         LocalDateTime dayStart = selectedDate.atStartOfDay();
         LocalDateTime dayEnd = dayStart.plusDays(1);
@@ -57,6 +62,7 @@ public class ScreeningController {
 
         model.addAttribute("screenings", screenings);
         model.addAttribute("selectedDate", selectedDate);
+        log.debug("[HTTP] GET / -> returned {} screening(s) for {}", screenings.size(), selectedDate);
         return "screenings";
     }
 
@@ -74,11 +80,15 @@ public class ScreeningController {
     @GetMapping("/screenings/{screeningId}")
     public String screeningSeats(@PathVariable Long screeningId, Model model,
                                   RedirectAttributes redirectAttributes) {
+        log.info("[HTTP] GET /screenings/{} (seat map)", screeningId);
         Screening screening = screeningRepository.findById(screeningId).orElse(null);
         if (screening == null) {
+            log.warn("[HTTP] GET /screenings/{} -> screening not found, redirecting to /", screeningId);
             return "redirect:/";
         }
         if (!screening.getStartTime().isAfter(LocalDateTime.now())) {
+            log.warn("[HTTP] GET /screenings/{} -> screening already started ({}), redirecting to /",
+                    screeningId, screening.getStartTime());
             redirectAttributes.addFlashAttribute("reservationError",
                     "Seat selection is only available for upcoming screenings.");
             return "redirect:/";
@@ -96,6 +106,8 @@ public class ScreeningController {
         model.addAttribute("screening", screening);
         model.addAttribute("seats", seats);
         model.addAttribute("maxSeats", seats.size() - reservedSeatIds.size());
+        log.info("[HTTP] GET /screenings/{} -> returned {} seats ({} reserved)",
+                screeningId, seats.size(), reservedSeatIds.size());
         return "seats";
     }
 
@@ -106,15 +118,21 @@ public class ScreeningController {
             @RequestParam String customerName,
             @RequestParam String customerEmail,
             RedirectAttributes redirectAttributes) {
+        log.info("[HTTP] POST /screenings/{}/reservations (seats={})", screeningId, seatIds);
         try {
             Reservation reservation = reservationManagement
                     .createDraft(screeningId, seatIds, customerName, customerEmail);
+            log.info("[HTTP] POST /screenings/{}/reservations -> draft reservation {} created "
+                    + "for customer {}", screeningId, reservation.getId(),
+                    reservation.getCustomer().getId());
             redirectAttributes.addFlashAttribute("reservationSuccess",
                     "Draft reservation created. Confirm it within "
                             + ReservationManagement.DRAFT_TTL_MINUTES
                             + " minutes to secure your seats.");
             return "redirect:/reservations/" + reservation.getId();
         } catch (ReservationRuleException e) {
+            log.warn("[HTTP] POST /screenings/{}/reservations -> failed: {}", screeningId,
+                    e.getMessage());
             redirectAttributes.addFlashAttribute("reservationError", e.getMessage());
             return "redirect:/screenings/" + screeningId;
         }
@@ -123,8 +141,10 @@ public class ScreeningController {
     @GetMapping("/reservations/{reservationId}")
     public String reservationDetail(@PathVariable Long reservationId, Model model,
                                     HttpSession session) {
+        log.info("[HTTP] GET /reservations/{} (detail)", reservationId);
         Reservation reservation = reservationRepository.findById(reservationId).orElse(null);
         if (reservation == null) {
+            log.warn("[HTTP] GET /reservations/{} -> not found, redirecting to /", reservationId);
             return "redirect:/";
         }
 
@@ -160,13 +180,18 @@ public class ScreeningController {
                 || reservation.getStatus() == ReservationStatus.CONFIRMED);
         model.addAttribute("canValidate", AdminController.isLoggedIn(session)
                 && reservation.getStatus() == ReservationStatus.PENDING_APPROVAL);
+        log.debug("[HTTP] GET /reservations/{} -> rendered reservation detail, status={}",
+                reservationId, reservation.getStatus());
         return "reservation";
     }
 
     @PostMapping("/reservations/{reservationId}/confirm")
     public String confirmReservation(@PathVariable Long reservationId,
                                      RedirectAttributes redirectAttributes) {
+        log.info("[HTTP] POST /reservations/{}/confirm", reservationId);
         ReservationManagement.Outcome outcome = reservationManagement.confirm(reservationId);
+        log.info("[HTTP] POST /reservations/{}/confirm -> success={}, message={}",
+                reservationId, outcome.success(), outcome.message());
         return reservationRedirect(outcome, "reservationSuccess", "reservationError",
                 redirectAttributes);
     }
@@ -174,7 +199,10 @@ public class ScreeningController {
     @PostMapping("/reservations/{reservationId}/cancel")
     public String cancelReservation(@PathVariable Long reservationId,
                                     RedirectAttributes redirectAttributes) {
+        log.info("[HTTP] POST /reservations/{}/cancel", reservationId);
         ReservationManagement.Outcome outcome = reservationManagement.cancel(reservationId);
+        log.info("[HTTP] POST /reservations/{}/cancel -> success={}, message={}",
+                reservationId, outcome.success(), outcome.message());
         return reservationRedirect(outcome, "reservationSuccess", "reservationError",
                 redirectAttributes);
     }

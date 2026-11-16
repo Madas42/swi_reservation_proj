@@ -1,5 +1,7 @@
 package com.cinema.reservation;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.CommandLineRunner;
@@ -15,8 +17,13 @@ import java.util.stream.IntStream;
 @EnableScheduling
 @SpringBootApplication
 public class CinemaReservationApplication {
+    private static final Logger log = LoggerFactory.getLogger(CinemaReservationApplication.class);
+
     public static void main(String[] args) {
-        SpringApplication.run(CinemaReservationApplication.class, args);
+        var context = SpringApplication.run(CinemaReservationApplication.class, args);
+        log.info("[STARTUP] Application 'Absolute Cinema Reservation' started "
+                        + "(active profiles: [{}])",
+                String.join(",", context.getEnvironment().getActiveProfiles()));
     }
 
     @Bean
@@ -27,8 +34,10 @@ public class CinemaReservationApplication {
             SeatRepository seatRepository) {
         return args -> {
             if (filmRepository.count() > 0) {
+                log.info("[SEED] Films already present, skipping initial seed");
                 return;
             }
+            log.info("[SEED] Seeding films, cinema room and seats");
 
             filmRepository.save(new Film(
                     "Interstellar", "A journey beyond the stars.", 169));
@@ -57,7 +66,9 @@ public class CinemaReservationApplication {
             if (rooms.isEmpty()) {
                 return;
             }
+            log.info("[SEED] Backfilling daily screenings for the next 7 days");
             CinemaRoom room = rooms.get(0);
+            int created = 0;
             for (Film film : filmRepository.findAll()) {
                 for (int day = 1; day <= 7; day++) {
                     LocalDateTime dayStart = LocalDate.now().plusDays(day).atStartOfDay();
@@ -68,8 +79,10 @@ public class CinemaReservationApplication {
                     LocalDateTime start = dayStart.plusHours(startHourOf(film.getTitle()));
                     screeningRepository.save(new Screening(
                             film, room, start, start.plusMinutes(film.getDurationMinutes())));
+                    created++;
                 }
             }
+            log.info("[SEED] Backfilled {} new screening(s)", created);
         };
     }
 
@@ -94,6 +107,7 @@ public class CinemaReservationApplication {
             if (reservationRepository.count() > 0 || screeningRepository.count() == 0) {
                 return;
             }
+            log.info("[SEED] Creating demo CONFIRMED reservation");
 
             Screening screening = screeningRepository.findAll().get(0);
             List<Seat> seats = seatRepository
@@ -105,6 +119,8 @@ public class CinemaReservationApplication {
             reservedSeatRepository.saveAll(List.of(
                     new ReservedSeat(reservation, seats.get(0)),
                     new ReservedSeat(reservation, seats.get(1))));
+            log.info("[SEED] Demo reservation {} created (CONFIRMED, screening {}, seats 1-2)",
+                    reservation.getId(), screening.getId());
         };
     }
 }

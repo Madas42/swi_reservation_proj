@@ -38,6 +38,10 @@ public class NotificationIntegration {
         for (int attempt = 1; attempt <= MAX_SEND_ATTEMPTS; attempt++) {
             try {
                 notificationClient.send(reservation.getCustomer().getEmail(), subject, body);
+                log.info("[NOTIFY] {} notification for reservation {} (customer {}) delivered to the "
+                                + "Notification Service",
+                        approved ? "APPROVED" : "REJECTED", reservation.getId(),
+                        reservation.getCustomer().getId());
                 return;
             } catch (Exception e) {
                 log.warn("Notification delivery attempt {}/{} failed for reservation {}: {}",
