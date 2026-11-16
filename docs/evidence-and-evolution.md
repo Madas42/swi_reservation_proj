@@ -191,3 +191,11 @@ If FAIL: —
 If BLOCKED: —
 
 Not covered: race of two simultaneous confirms (DB unique constraint backs the check but has no test).
+
+# C10
+| Situation | Expected and actual outcome | How correctness was verified | What do logs show / is logging needed? |
+| --- | --- | --- | --- |
+| Successful confirmation | | | |
+| Conflict rejected | | | |
+| Technical failure and recovery | | | |
+| Application restart | | | |
