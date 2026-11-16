@@ -195,7 +195,7 @@ Not covered: race of two simultaneous confirms (DB unique constraint backs the c
 # C10
 | Situation | Expected and actual outcome | How correctness was verified | What do logs show / is logging needed? |
 | --- | --- | --- | --- |
-| Successful confirmation | | | |
+| Successful confirmation | Reservation Confirmed and written to database. | Confirmed and notified by web app. | Logs show confirmed reservation, but are not especialy needed for this scenario. |
 | Conflict rejected | | | |
 | Technical failure and recovery | | | |
 | Application restart | | | |
