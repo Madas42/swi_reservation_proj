@@ -17,21 +17,31 @@ against the real H2 database; tests are transactional and rolled back.
 ## Exact Commands (Dependencies, Schema, Test DB, Build/Test/Run & Smoke) (C09; 5)
 
 - **1. Dependencies (stažení a ověření závislostí z `pom.xml`):**
-  `mvn dependency:resolve`
+  ```
+  mvn dependency:resolve
+  ```
 
 - **2. Schema & Test DB (inicializace schématu a testovací H2 databáze):**
   Managed automatically via Hibernate (`ddl-auto=update`) on startup/test run — no manual SQL migration scripts required. To reset/recreate a clean file database (`./data/cinema-reservation`), delete `./data` and run:
-  `mvn test-compile`
+  ```
+  mvn test-compile
+  ```
 
 - **3. Build & Test (kompilace + unit a integrační testy nad reálnou H2 DB):**
-  `mvn clean test`
+  ```
+  mvn clean test
+  ````
   *(Runs `ReservationPersistenceTest` and `ReservationLifecycleTest` against the real H2 database; tests are transactional and rolled back. CI runs `mvn --batch-mode clean test`.)*
 
 - **4. Package release artifact (vytvoření spustitelného JAR):**
-  `mvn clean package`
+  ```
+  mvn clean package
+  ```
 
 - **5. Run application (spuštění serveru):**
-  `mvn spring-boot:run`
+  ```
+  mvn spring-boot:run
+  ```
 
 - **6. Smoke check (ověření běžící aplikace po startu):**
   Open `http://localhost:8080/` in a browser (expected: cinema reservation UI loads with HTTP 200)
