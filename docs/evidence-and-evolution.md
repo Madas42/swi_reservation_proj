@@ -193,9 +193,10 @@ If BLOCKED: —
 Not covered: race of two simultaneous confirms (DB unique constraint backs the check but has no test).
 
 # C10
+
 | Situation | Expected and actual outcome | How correctness was verified | What do logs show / is logging needed? |
 | --- | --- | --- | --- |
 | Successful confirmation | Reservation Confirmed and written to database. | Confirmed and notified by web app. | Logs show confirmed reservation, but are not especialy needed for this scenario. |
-| Conflict rejected | | | |
-| Technical failure and recovery | | App console logs.| |
-| Application restart | | | |
+| Conflict rejected |  |  |  |
+| Technical failure and recovery | Database was stopped during operation. Requests waited, nothing was lost. After the database was started again, everything completed and the app did not crash. | Console log captured during the test. | Logs are needed here: they show when and where the failure happened and how the app recovered. |
+| Application restart |  |  |  |
