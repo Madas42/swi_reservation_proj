@@ -197,6 +197,6 @@ Not covered: race of two simultaneous confirms (DB unique constraint backs the c
 | Situation | Expected and actual outcome | How correctness was verified | What do logs show / is logging needed? |
 | --- | --- | --- | --- |
 | Successful confirmation | Reservation Confirmed and written to database. | Confirmed and notified by web app. | Logs show confirmed reservation, but are not especialy needed for this scenario. |
-| Conflict rejected |  |  |  |
+| Conflict rejected | If one client reserved seats another can't reserve it too, error is shown | Two reservations were made but the second was made a little later. | Log shows expired reservation  |
 | Technical failure and recovery | Database was stopped during operation. Requests waited, nothing was lost. After the database was started again, everything completed and the app did not crash. | Console log captured during the test. | Logs are needed here: they show when and where the failure happened and how the app recovered. |
 | Application restart |  |  |  |
